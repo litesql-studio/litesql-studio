@@ -2511,6 +2511,10 @@ if (isset($_GET['api'])) {
                             <i data-lucide="file-code" class="w-3.5 h-3.5 text-emerald-500"></i>
                             <span>Export Schema DDL (.sql)</span>
                         </button>
+                        <button @click="openCodeGeneratorModal(); open = false" class="w-full text-left p-2 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 hover:bg-sky-500/10 hover:text-sky-600 dark:hover:text-sky-400 flex items-center gap-2 transition">
+                            <i data-lucide="code" class="w-3.5 h-3.5 text-sky-500"></i>
+                            <span>Code Snippet Generator</span>
+                        </button>
                         <a href="?api=download_all_zip" @click="open = false" class="w-full text-left p-2 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center gap-2 transition border-t border-slate-100 dark:border-slate-800" title="Download ZIP containing ALL server SQLite databases">
                             <i data-lucide="archive" class="w-3.5 h-3.5 text-emerald-500"></i>
                             <span>Zip All Databases (.zip)</span>
@@ -5010,6 +5014,58 @@ if (isset($_GET['api'])) {
                 </form>
             </div>
         </div>
+
+        <!-- MODAL 27: REST API & MULTI-LANGUAGE CODE SNIPPET GENERATOR WIZARD -->
+        <div x-show="showCodeGeneratorModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 overflow-y-auto" x-cloak>
+            <div class="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 space-y-4 max-h-[85vh] flex flex-col">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
+                        <i data-lucide="code" class="w-4 h-4 text-sky-500"></i>
+                        <span>Code Snippet & REST API Generator</span>
+                    </h3>
+                    <button @click="showCodeGeneratorModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-white transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Target Language / Environment</label>
+                        <select x-model="codeGenLang" @change="generateCodeSnippet()" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-sky-500">
+                            <option value="php">🐘 PHP (PDO Database Driver)</option>
+                            <option value="nodejs">🟢 Node.js (better-sqlite3)</option>
+                            <option value="python">🐍 Python (sqlite3 native)</option>
+                            <option value="flutter">💙 Flutter / Dart (sqflite plugin)</option>
+                            <option value="curl">⚡ cURL HTTP REST API</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Operation Type</label>
+                        <select x-model="codeGenOp" @change="generateCodeSnippet()" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-sky-500">
+                            <option value="select">SELECT All Rows</option>
+                            <option value="insert">INSERT Record</option>
+                            <option value="update">UPDATE Record</option>
+                            <option value="delete">DELETE Record</option>
+                            <option value="custom">Active Editor SQL Query</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-hidden relative">
+                    <textarea x-model="generatedCode" readonly class="w-full h-full min-h-[260px] bg-slate-900 text-sky-400 p-4 rounded-2xl font-mono text-xs focus:outline-none resize-none border border-slate-800"></textarea>
+                </div>
+
+                <div class="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <span class="text-[11px] text-slate-400">1-click drop-in snippet ready for production code!</span>
+                    <div class="flex items-center gap-2">
+                        <button type="button" @click="showCodeGeneratorModal = false" class="px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Close</button>
+                        <button @click="copyCodeSnippet()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-lg shadow-sky-600/20 flex items-center gap-1.5">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            <span>Copy Code Snippet</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     </div>
     </div>
@@ -5133,6 +5189,11 @@ if (isset($_GET['api'])) {
                 colComments: {},
                 showCommentModal: false,
                 commentForm: { column: '', comment: '' },
+
+                showCodeGeneratorModal: false,
+                codeGenLang: 'php',
+                codeGenOp: 'select',
+                generatedCode: '',
 
                 get filteredColumns() {
                     if (!this.schema || !this.schema.columns) return [];
@@ -6965,6 +7026,63 @@ if (isset($_GET['api'])) {
                     } else {
                         this.showToast(data.error || 'Failed to save note', 'error');
                     }
+                },
+
+                openCodeGeneratorModal() {
+                    this.showCodeGeneratorModal = true;
+                    this.generateCodeSnippet();
+                },
+
+                generateCodeSnippet() {
+                    const dbName = this.activeDb ? this.activeDb.split(/[/\\]/).pop() : 'database.sqlite';
+                    const table = this.activeTable || 'table_name';
+                    const lang = this.codeGenLang;
+                    const op = this.codeGenOp;
+                    const sql = this.sqlQuery.trim() || `SELECT * FROM \`${table}\` LIMIT 50;`;
+
+                    let code = '';
+                    if (lang === 'php') {
+                        if (op === 'select') {
+                            code = `<?php\n// PHP PDO SQLite - Select All Records\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->query("SELECT * FROM \`${table}\`");\n$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);\nprint_r($rows);`;
+                        } else if (op === 'insert') {
+                            code = `<?php\n// PHP PDO SQLite - Insert Record\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->prepare("INSERT INTO \`${table}\` (column1, column2) VALUES (?, ?)");\n$stmt->execute(['value1', 'value2']);\necho "Inserted ID: " . $pdo->lastInsertId();`;
+                        } else if (op === 'update') {
+                            code = `<?php\n// PHP PDO SQLite - Update Record\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->prepare("UPDATE \`${table}\` SET column1 = ? WHERE id = ?");\n$stmt->execute(['new_value', 1]);`;
+                        } else if (op === 'delete') {
+                            code = `<?php\n// PHP PDO SQLite - Delete Record\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->prepare("DELETE FROM \`${table}\` WHERE id = ?");\n$stmt->execute([1]);`;
+                        } else {
+                            code = `<?php\n// PHP PDO SQLite - Custom Query\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->query("${sql}");\n$result = $stmt->fetchAll(PDO::FETCH_ASSOC);\nprint_r($result);`;
+                        }
+                    } else if (lang === 'nodejs') {
+                        if (op === 'select') {
+                            code = `// Node.js - better-sqlite3\nconst Database = require('better-sqlite3');\nconst db = new Database('${dbName}');\n\nconst rows = db.prepare("SELECT * FROM \`${table}\`").all();\nconsole.log(rows);`;
+                        } else if (op === 'insert') {
+                            code = `// Node.js - better-sqlite3 Insert\nconst Database = require('better-sqlite3');\nconst db = new Database('${dbName}');\n\nconst info = db.prepare("INSERT INTO \`${table}\` (column1, column2) VALUES (?, ?)").run('val1', 'val2');\nconsole.log('Inserted Row ID:', info.lastInsertRowid);\n`;
+                        } else {
+                            code = `// Node.js - better-sqlite3 Exec\nconst Database = require('better-sqlite3');\nconst db = new Database('${dbName}');\n\nconst result = db.prepare(\`${sql}\`).all();\nconsole.log(result);`;
+                        }
+                    } else if (lang === 'python') {
+                        if (op === 'select') {
+                            code = `# Python 3 - sqlite3 native\nimport sqlite3\n\nconn = sqlite3.connect('${dbName}')\ncursor = conn.cursor()\ncursor.execute("SELECT * FROM \`${table}\`")\nrows = cursor.fetchall()\nprint(rows)\nconn.close()`;
+                        } else if (op === 'insert') {
+                            code = `# Python 3 - sqlite3 Insert\nimport sqlite3\n\nconn = sqlite3.connect('${dbName}')\ncursor = conn.cursor()\ncursor.execute("INSERT INTO \`${table}\` (column1, column2) VALUES (?, ?)", ('val1', 'val2'))\nconn.commit()\nconn.close()`;
+                        } else {
+                            code = `# Python 3 - sqlite3 Query\nimport sqlite3\n\nconn = sqlite3.connect('${dbName}')\ncursor = conn.cursor()\ncursor.execute("""${sql}""")\nresult = cursor.fetchall()\nprint(result)\nconn.close()`;
+                        }
+                    } else if (lang === 'flutter') {
+                        code = `// Flutter / Dart - sqflite plugin\nimport 'package:sqflite/sqflite.dart';\nimport 'package:path/path.dart';\n\nFuture<List<Map<String, dynamic>>> getRecords() async {\n  final dbPath = await getDatabasesPath();\n  final path = join(dbPath, '${dbName}');\n  final Database db = await openDatabase(path);\n  \n  return await db.rawQuery("SELECT * FROM \`${table}\`");\n}`;
+                    } else if (lang === 'curl') {
+                        const host = window.location.origin + window.location.pathname;
+                        code = `# cURL HTTP REST API Call\ncurl -X POST "${host}?api=query&db_path=${encodeURIComponent(this.activeDb)}"\n  -H "Content-Type: application/json"\n  -d '{"sql": "${sql.replace(/'/g, "\\'")}"}'`;
+                    }
+                    this.generatedCode = code;
+                },
+
+                copyCodeSnippet() {
+                    if (!this.generatedCode) return;
+                    navigator.clipboard.writeText(this.generatedCode).then(() => {
+                        this.showToast('Code snippet copied to clipboard!', 'success');
+                    });
                 }
             }
         }
