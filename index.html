@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteSQL Studio - Next-Gen Single-File SQLite Web Administration Studio</title>
+    <meta name="description" content="Next-Generation, Single-File SQLite Web Administration Studio for PHP 8.2+. Zero dependencies, modern glassmorphism dark UI, live SQL autocomplete, inline AJAX editor, and DDL exporter.">
+    <meta name="keywords" content="sqlite web manager, single file sqlite admin, php sqlite gui, litesql studio, phpliteadmin alternative, adminer sqlite replacement">
+    
+    <!-- Open Graph / Meta -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="LiteSQL Studio - Single-File SQLite Web Manager">
+    <meta property="og:description" content="Drop-in single-file web administration studio for SQLite databases built with PHP 8.2+, Tailwind CSS, and Alpine.js.">
+    
+    <!-- Google Fonts & Tailwind CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-sky-500 selection:text-white">
+
+    <!-- NAVBAR -->
+    <header class="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-600 via-indigo-500 to-amber-500 p-0.5 shadow-lg shadow-sky-500/20">
+                    <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                        <i data-lucide="database" class="w-5 h-5 text-sky-400"></i>
+                    </div>
+                </div>
+                <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">LiteSQL Studio</span>
+                <span class="text-[10px] font-mono font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-full">v1.0.0</span>
+            </div>
+
+            <nav class="hidden md:flex items-center gap-8 text-xs font-medium text-slate-400">
+                <a href="#features" class="hover:text-white transition">Features</a>
+                <a href="#quickstart" class="hover:text-white transition">Quick Start</a>
+                <a href="#security" class="hover:text-white transition">Security Guide</a>
+                <a href="https://github.com/litesql-studio/litesql-studio" target="_blank" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-lg shadow-sky-600/20">
+                    <i data-lucide="github" class="w-4 h-4"></i>
+                    <span>GitHub Repo</span>
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="relative py-24 overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-900/20 via-slate-950 to-slate-950 pointer-events-none"></div>
+        <div class="max-w-5xl mx-auto px-6 text-center relative z-10 space-y-8">
+            <div class="inline-flex items-center gap-2 bg-slate-900/80 border border-slate-800 rounded-full px-4 py-1.5 text-xs text-slate-300 backdrop-blur-md shadow-xl">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>The Premier phpLiteAdmin & Adminer Replacement for 2026</span>
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight">
+                Next-Gen Single-File <br>
+                <span class="bg-gradient-to-r from-sky-400 via-indigo-400 to-amber-400 bg-clip-text text-transparent">SQLite Web Administration</span>
+            </h1>
+
+            <p class="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+                Zero external dependencies. Drop a single <code class="text-sky-300 font-mono bg-slate-900 px-2 py-0.5 rounded border border-slate-800">litesql.php</code> file onto any PHP 8.2+ server and gain instant visual management, live SQL autocomplete, AJAX data editing, and DDL schema migration export.
+            </p>
+
+            <div class="flex flex-wrap items-center justify-center gap-4 pt-4">
+                <a href="https://github.com/litesql-studio/litesql-studio/blob/main/litesql.php" target="_blank" class="bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-sm px-6 py-3.5 rounded-2xl transition shadow-xl shadow-sky-500/25 flex items-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span>Download litesql.php</span>
+                </a>
+                <a href="#quickstart" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 font-semibold text-sm px-6 py-3.5 rounded-2xl transition flex items-center gap-2">
+                    <i data-lucide="terminal" class="w-4 h-4 text-slate-400"></i>
+                    <span>Quick Setup Guide</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES GRID -->
+    <section id="features" class="py-20 border-t border-slate-900 bg-slate-950/50">
+        <div class="max-w-7xl mx-auto px-6 space-y-16">
+            <div class="text-center space-y-4 max-w-2xl mx-auto">
+                <h2 class="text-3xl font-extrabold text-white">Packed with Enterprise Studio Features</h2>
+                <p class="text-slate-400 text-xs sm:text-sm">Built from the ground up for developer speed, security, and SQLite precision.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- FEATURE 1 -->
+                <div class="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 space-y-4 hover:border-slate-700 transition shadow-xl">
+                    <div class="w-10 h-10 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                        <i data-lucide="edit-3" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Excel-Style AJAX Data Grid</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Double-click any cell in the Data Grid to edit and commit changes inline via AJAX. Full vertical record inspector modal with 1-click JSON export.</p>
+                </div>
+
+                <!-- FEATURE 2 -->
+                <div class="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 space-y-4 hover:border-slate-700 transition shadow-xl">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i data-lucide="terminal" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Live SQL Autocomplete</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Context-aware SQL console with real-time keyword, table, and column suggestions. Features EXPLAIN QUERY PLAN B-Tree profiler with warning badges.</p>
+                </div>
+
+                <!-- FEATURE 3 -->
+                <div class="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 space-y-4 hover:border-slate-700 transition shadow-xl">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <i data-lucide="file-code" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Schema DDL & Migration Exporter</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Generate complete .sql DDL migration scripts for tables, indexes, triggers, and views with 1-click clipboard copy or instant file downloads.</p>
+                </div>
+
+                <!-- FEATURE 4 -->
+                <div class="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 space-y-4 hover:border-slate-700 transition shadow-xl">
+                    <div class="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                        <i data-lucide="gauge" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">PRAGMA Performance Tuner</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">1-click engine tuning for PRAGMA cache_size (2MB-64MB), synchronous mode (FULL/NORMAL/OFF), temp_store, and lock busy timeouts.</p>
+                </div>
+
+                <!-- FEATURE 5 -->
+                <div class="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 space-y-4 hover:border-slate-700 transition shadow-xl">
+                    <div class="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                        <i data-lucide="git-fork" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Interactive ER Diagram Exporter</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Visualize relational schemas, export Mermaid.js ER markup for GitHub README markdown, or download high-resolution vector .svg diagrams.</p>
+                </div>
+
+                <!-- FEATURE 6 -->
+                <div class="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 space-y-4 hover:border-slate-700 transition shadow-xl">
+                    <div class="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+                        <i data-lucide="copy" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Column Cloning & Metadata Notes</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Clone existing column definitions with row data copying, reorder columns via drag/up-down controls, and store persistent column notes.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUICK START -->
+    <section id="quickstart" class="py-20">
+        <div class="max-w-4xl mx-auto px-6 space-y-12">
+            <div class="text-center space-y-4">
+                <h2 class="text-3xl font-extrabold text-white">Get Started in Under 30 Seconds</h2>
+                <p class="text-slate-400 text-xs sm:text-sm">No npm, no composer, no database configuration setups required.</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 font-mono text-xs shadow-2xl">
+                <div class="space-y-2">
+                    <span class="text-slate-500 font-bold"># 1. Download single file litesql.php into your web root</span>
+                    <div class="bg-slate-950 border border-slate-800/80 p-4 rounded-2xl text-sky-400 flex items-center justify-between">
+                        <code>curl -O https://raw.githubusercontent.com/litesql-studio/litesql-studio/main/litesql.php</code>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <span class="text-slate-500 font-bold"># 2. Run PHP built-in web server locally</span>
+                    <div class="bg-slate-950 border border-slate-800/80 p-4 rounded-2xl text-emerald-400 flex items-center justify-between">
+                        <code>php -S localhost:8000</code>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <span class="text-slate-500 font-bold"># 3. Open browser & login with default password</span>
+                    <div class="bg-slate-950 border border-slate-800/80 p-4 rounded-2xl text-amber-400 flex items-center justify-between">
+                        <code>URL: http://localhost:8000/litesql.php  |  Default Password: admin</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECURITY GUIDE -->
+    <section id="security" class="py-20 border-t border-slate-900 bg-slate-950/80">
+        <div class="max-w-4xl mx-auto px-6 space-y-10">
+            <div class="text-center space-y-4">
+                <h2 class="text-3xl font-extrabold text-white flex items-center justify-center gap-3">
+                    <i data-lucide="shield-check" class="w-8 h-8 text-emerald-500"></i>
+                    <span>Production Security & Hardening</span>
+                </h2>
+                <p class="text-slate-400 text-xs sm:text-sm">Follow these essential security steps to protect your database server.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+                <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-3">
+                    <div class="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                        <i data-lucide="key" class="w-4 h-4"></i>
+                        <span>1. Change Master Password</span>
+                    </div>
+                    <p class="text-slate-400 leading-relaxed">
+                        Log in ➔ Click <code class="text-white bg-slate-800 px-1 rounded">🔒 Security</code> in top header ➔ Enter current password (<code class="text-white bg-slate-800 px-1 rounded">admin</code>) and set a strong new password. Automatically hashed via PHP BCrypt.
+                    </p>
+                </div>
+
+                <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-3">
+                    <div class="flex items-center gap-2 text-rose-400 font-bold text-sm">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        <span>2. Delete After Maintenance</span>
+                    </div>
+                    <p class="text-slate-400 leading-relaxed">
+                        If used for temporary database tasks on a live server, <strong>delete <code class="text-white bg-slate-800 px-1 rounded">litesql.php</code> immediately after use</strong>. Simply re-upload when needed in the future!
+                    </p>
+                </div>
+
+                <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-3">
+                    <div class="flex items-center gap-2 text-sky-400 font-bold text-sm">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                        <span>3. Restrict Access by IP</span>
+                    </div>
+                    <p class="text-slate-400 leading-relaxed">
+                        Add IP restriction rules in your <code class="text-white bg-slate-800 px-1 rounded">.htaccess</code> to restrict access exclusively to your trusted IP address.
+                    </p>
+                </div>
+
+                <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-3">
+                    <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                        <i data-lucide="shield" class="w-4 h-4"></i>
+                        <span>4. Enforce HTTPS / SSL</span>
+                    </div>
+                    <p class="text-slate-400 leading-relaxed">
+                        Always serve LiteSQL Studio over encrypted HTTPS connections to prevent credential sniffing on public networks.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SPONSOR & DONATE SECTION -->
+    <section id="sponsor" class="py-20 border-t border-slate-900 bg-slate-950">
+        <div class="max-w-4xl mx-auto px-6 text-center space-y-8">
+            <div class="inline-flex items-center gap-2 bg-pink-500/10 border border-pink-500/20 rounded-full px-4 py-1.5 text-xs text-pink-400 font-bold">
+                <i data-lucide="heart" class="w-4 h-4 fill-pink-500/30"></i>
+                <span>Support Open Source Development</span>
+            </div>
+
+            <h2 class="text-3xl font-extrabold text-white">Support & Sponsor LiteSQL Studio</h2>
+            <p class="text-slate-400 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
+                LiteSQL Studio is 100% free and open-source under the MIT License. If you find it valuable for your projects, consider supporting its continuous development!
+            </p>
+
+            <div class="flex flex-wrap items-center justify-center gap-4 pt-2">
+                <a href="https://buymeacoffee.com/dhirajsharma" target="_blank" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-6 py-3.5 rounded-2xl transition shadow-xl shadow-amber-500/20 flex items-center gap-2">
+                    <i data-lucide="coffee" class="w-4 h-4"></i>
+                    <span>Buy Me a Coffee</span>
+                </a>
+                <a href="https://github.com/sponsors/litesql-studio" target="_blank" class="bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs px-6 py-3.5 rounded-2xl transition shadow-xl shadow-pink-600/20 flex items-center gap-2">
+                    <i data-lucide="heart" class="w-4 h-4 fill-white/20"></i>
+                    <span>Sponsor on GitHub</span>
+                </a>
+            </div>
+
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 max-w-md mx-auto text-xs text-slate-400 space-y-1">
+                <p><span class="font-bold text-slate-200">📱 UPI / GPay / PhonePe:</span> <code class="text-amber-400 font-mono">9795164872@ybl</code></p>
+                <p><span class="font-bold text-slate-200">🌐 Direct Donation:</span> <a href="https://dhirajsharma.com/donate" target="_blank" class="text-sky-400 hover:underline">dhirajsharma.com/donate</a></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-900 py-12 text-center text-xs text-slate-500 space-y-4">
+        <div class="flex items-center justify-center gap-2 text-slate-300 font-bold text-sm">
+            <i data-lucide="database" class="w-4 h-4 text-sky-400"></i>
+            <span>LiteSQL Studio</span>
+        </div>
+        <p>Created with ❤️ by <a href="https://dhirajsharma.com" target="_blank" class="text-sky-400 font-semibold hover:underline">Dhiraj Sharma</a> (Email: <a href="mailto:dheeraj.gzp@gmail.com" class="text-slate-300 hover:text-white">dheeraj.gzp@gmail.com</a> | Mobile: <a href="tel:+919795164872" class="text-slate-300 hover:text-white">+91 9795164872</a>)</p>
+        <p>Released under the MIT License. Free for Personal & Commercial Use.</p>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

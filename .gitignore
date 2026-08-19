@@ -1,0 +1,17 @@
+# Sensitive Credentials & Local Config
+.litesql_config.json
+*_comments.json
+
+# Databases & Log Files
+*.sqlite
+*.sqlite3
+*.db
+*.db3
+*.sqlite-wal
+*.sqlite-shm
+
+# OS & IDE Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
