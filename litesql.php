@@ -3964,11 +3964,8 @@ self.addEventListener('fetch', (e) => {
                                             </div>
                                         </div>
                                     </template>
-
-                                    </template>
                                 </div>
                             </div>
-                        </div>
                         
                         <!-- TAB 4: DATABASE ANALYTICS & HEALTH DIAGNOSTICS DASHBOARD -->
                         <div x-show="activeTab === 'analytics'" class="flex-1 overflow-auto p-6 space-y-6">
