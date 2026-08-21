@@ -5592,7 +5592,7 @@ self.addEventListener('fetch', (e) => {
                 <!-- Modal Header / Search Bar -->
                 <div class="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
                     <i data-lucide="search" class="w-5 h-5 text-sky-500 shrink-0"></i>
-                    <input type="text" x-ref="globalSearchInput" x-model="globalSearchQuery" @input.debounce.300ms="performGlobalSearch()" @keyup.enter="performGlobalSearch()" placeholder="Search studio actions, tables, or database records (e.g. 'theme', 'Ghazipur', 'iti_contacts')..." class="w-full bg-transparent text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none" autofocus>
+                    <input type="text" x-ref="globalSearchInput" x-model="globalSearchQuery" @input="setTimeout(() => lucide.createIcons(), 50)" @input.debounce.300ms="performGlobalSearch(); setTimeout(() => lucide.createIcons(), 100)" @keyup.enter="performGlobalSearch(); setTimeout(() => lucide.createIcons(), 100)" placeholder="Search studio actions, tables, or database records (e.g. 'theme', 'Ghazipur', 'iti_contacts')..." class="w-full bg-transparent text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none" autofocus>
                     
                     <button @click="performGlobalSearch()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shrink-0 flex items-center gap-1.5 shadow-md shadow-sky-600/20 active:scale-95">
                         <i :data-lucide="globalSearchLoading ? 'loader-2' : 'search'" class="w-3.5 h-3.5" :class="globalSearchLoading ? 'animate-spin' : ''"></i>
@@ -5700,8 +5700,6 @@ self.addEventListener('fetch', (e) => {
             </div>
         </div>
     </template>
-    </div>
-    </div>
 
     <!-- MODAL: EXPORT AES-256 ENCRYPTED DATABASE BACKUP -->
     <template x-if="showEncryptedExportModal">
