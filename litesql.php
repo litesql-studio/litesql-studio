@@ -1447,6 +1447,68 @@ class LiteEngine {
         }
     }
 
+    public function globalSearch(string $query, int $maxPerTable = 50): array {
+        if (!$this->pdo || empty(trim($query))) {
+            return ['query' => $query, 'total_matches' => 0, 'results' => []];
+        }
+
+        $query = trim($query);
+        $tables = $this->getTables();
+        $results = [];
+        $totalMatches = 0;
+
+        foreach ($tables as $t) {
+            if ($t['type'] !== 'table' || str_starts_with($t['name'], 'sqlite_')) continue;
+
+            $tName = $t['name'];
+            $schema = $this->getSchema($tName);
+            $cols = array_map(fn($c) => $c['name'], $schema['columns'] ?? []);
+
+            if (empty($cols)) continue;
+
+            $quotedTable = $this->quoteIdentifier($tName);
+            $whereParts = [];
+            $params = [];
+
+            foreach ($cols as $col) {
+                $whereParts[] = $this->quoteIdentifier($col) . " LIKE ?";
+                $params[] = '%' . $query . '%';
+            }
+
+            $whereClause = implode(' OR ', $whereParts);
+
+            $countSql = "SELECT COUNT(*) as cnt FROM {$quotedTable} WHERE {$whereClause}";
+            try {
+                $countStmt = $this->pdo->prepare($countSql);
+                $countStmt->execute($params);
+                $matchCount = (int)($countStmt->fetch()['cnt'] ?? 0);
+
+                if ($matchCount > 0) {
+                    $selectSql = "SELECT * FROM {$quotedTable} WHERE {$whereClause} LIMIT {$maxPerTable}";
+                    $selectStmt = $this->pdo->prepare($selectSql);
+                    $selectStmt->execute($params);
+                    $rows = $selectStmt->fetchAll();
+
+                    $totalMatches += $matchCount;
+                    $results[] = [
+                        'table' => $tName,
+                        'match_count' => $matchCount,
+                        'columns' => $cols,
+                        'rows' => $rows
+                    ];
+                }
+            } catch (Throwable $e) {
+                continue;
+            }
+        }
+
+        return [
+            'query' => $query,
+            'total_matches' => $totalMatches,
+            'results' => $results
+        ];
+    }
+
     public function executeQuery(string $sql, int $autoLimit = 500, bool $dryRun = false): array {
         if (!$this->pdo) return ['error' => 'No database connected'];
         $startTime = microtime(true);
@@ -2189,6 +2251,12 @@ if (isset($_GET['api'])) {
             echo json_encode(['success' => $success]);
             break;
 
+        case 'global_search':
+            header('Content-Type: application/json');
+            $q = $_GET['q'] ?? '';
+            echo json_encode($engine->globalSearch($q));
+            break;
+
         case 'query':
             header('Content-Type: application/json');
             $input = json_decode(file_get_contents('php://input'), true);
@@ -2467,6 +2535,14 @@ if (isset($_GET['api'])) {
                         <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-sky-500"></i>
                         <span class="font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[140px]" x-text="activeDbName"></span>
                         <button @click.stop="vacuumDb()" title="Vacuum Database" class="hover:text-amber-500 text-slate-400 ml-0.5 transition active:scale-95"><i data-lucide="sparkles" class="w-3 h-3"></i></button>
+                    </div>
+                </template>
+
+                <!-- GLOBAL DATABASE SEARCH INPUT TRIGGER -->
+                <template x-if="activeDb">
+                    <div @click="showGlobalSearchModal = true" class="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer flex items-center gap-2 transition shadow-inner" title="Search keyword across ALL tables in database">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-sky-500 shrink-0"></i>
+                        <span class="hidden md:inline text-slate-500 dark:text-slate-400 font-medium">Search DB...</span>
                     </div>
                 </template>
             </div>
@@ -5205,6 +5281,98 @@ if (isset($_GET['api'])) {
             </div>
         </div>
     </div>
+
+    <!-- GLOBAL DATABASE SEARCH MODAL -->
+    <template x-if="showGlobalSearchModal">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md" @keydown.escape.window="showGlobalSearchModal = false">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" @click.away="showGlobalSearchModal = false">
+                <!-- Modal Header / Search Bar -->
+                <div class="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                    <i data-lucide="search" class="w-5 h-5 text-sky-500 shrink-0"></i>
+                    <input type="text" x-model="globalSearchQuery" @keyup.enter="performGlobalSearch()" placeholder="Search keyword across ALL database tables (e.g. 'Ghazipur', 'Sharma')..." class="w-full bg-transparent text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none" autofocus>
+                    
+                    <button @click="performGlobalSearch()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shrink-0 flex items-center gap-1.5 shadow-md shadow-sky-600/20 active:scale-95">
+                        <i :data-lucide="globalSearchLoading ? 'loader-2' : 'search'" class="w-3.5 h-3.5" :class="globalSearchLoading ? 'animate-spin' : ''"></i>
+                        <span>Search</span>
+                    </button>
+                    <button @click="showGlobalSearchModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+
+                <!-- Modal Body Results Area -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                    <template x-if="globalSearchLoading">
+                        <div class="py-16 text-center space-y-3">
+                            <i data-lucide="loader-2" class="w-8 h-8 text-sky-500 animate-spin mx-auto"></i>
+                            <p class="text-xs text-slate-500 font-mono">Searching all tables in active database...</p>
+                        </div>
+                    </template>
+
+                    <template x-if="!globalSearchLoading && globalSearchResults.query && globalSearchResults.total_matches === 0">
+                        <div class="py-16 text-center space-y-2">
+                            <i data-lucide="search-x" class="w-10 h-10 text-slate-400 mx-auto"></i>
+                            <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300">No Matches Found</h4>
+                            <p class="text-xs text-slate-500">No records found matching "<span x-text="globalSearchResults.query"></span>" across any tables.</p>
+                        </div>
+                    </template>
+
+                    <template x-if="!globalSearchLoading && globalSearchResults.results && globalSearchResults.results.length > 0">
+                        <div class="space-y-6">
+                            <!-- Summary Header -->
+                            <div class="flex items-center justify-between bg-sky-500/10 border border-sky-500/20 p-3.5 rounded-2xl text-xs">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">🎉</span>
+                                    <span class="font-bold text-sky-600 dark:text-sky-400" x-text="'Found ' + globalSearchResults.total_matches + ' matching records across ' + globalSearchResults.results.length + ' tables!'"></span>
+                                </div>
+                                <span class="text-[10px] text-slate-400 font-mono">Showing top 50 matches per table</span>
+                            </div>
+
+                            <!-- Results grouped by Table -->
+                            <template x-for="(res, rIdx) in globalSearchResults.results" :key="rIdx">
+                                <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs space-y-2">
+                                    <div class="p-3 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <i data-lucide="table" class="w-4 h-4 text-sky-500"></i>
+                                            <span class="font-bold text-slate-800 dark:text-slate-200 text-xs" x-text="res.table"></span>
+                                            <span class="text-[10px] bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold px-2 py-0.5 rounded-full border border-sky-500/20" x-text="res.match_count + ' matches'"></span>
+                                        </div>
+
+                                        <button @click="jumpToSearchResultTable(res.table, globalSearchResults.query)" class="bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold px-3 py-1 rounded-xl transition flex items-center gap-1 shadow-xs active:scale-95">
+                                            <span>Open Table</span>
+                                            <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Rows Preview Grid -->
+                                    <div class="overflow-x-auto p-2">
+                                        <table class="w-full text-left border-collapse text-[11px]">
+                                            <thead class="bg-slate-200/50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
+                                                <tr>
+                                                    <th class="p-2 w-10 text-center">#</th>
+                                                    <template x-for="col in res.columns" :key="col">
+                                                        <th class="p-2 border-r border-slate-200 dark:border-slate-800/60 truncate" x-text="col"></th>
+                                                    </template>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono text-slate-800 dark:text-slate-300">
+                                                <template x-for="(row, rowIdx) in res.rows" :key="rowIdx">
+                                                    <tr class="hover:bg-sky-500/5 transition">
+                                                        <td class="p-2 text-center text-slate-400 border-r border-slate-200 dark:border-slate-800/60" x-text="rowIdx + 1"></td>
+                                                        <template x-for="col in res.columns" :key="col">
+                                                            <td class="p-2 border-r border-slate-200 dark:border-slate-800/60 truncate max-w-[200px]" :class="String(row[col] || '').toLowerCase().includes(globalSearchResults.query.toLowerCase()) ? 'bg-amber-500/10 text-amber-600 dark:text-amber-300 font-bold' : ''" x-text="row[col]"></td>
+                                                        </template>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </template>
     </div>
     </div>
 
@@ -5391,6 +5559,11 @@ if (isset($_GET['api'])) {
 
                     return stats;
                 },
+
+                showGlobalSearchModal: false,
+                globalSearchQuery: '',
+                globalSearchLoading: false,
+                globalSearchResults: { query: '', total_matches: 0, results: [] },
 
                 showCreateViewModal: false,
                 newViewName: '',
@@ -6079,6 +6252,24 @@ if (isset($_GET['api'])) {
                     } else {
                         this.showToast(data.error || 'Failed to add column', 'error');
                     }
+                },
+
+                async performGlobalSearch() {
+                    if (!this.globalSearchQuery.trim()) return;
+                    this.globalSearchLoading = true;
+                    const res = await fetch(`?api=global_search&q=${encodeURIComponent(this.globalSearchQuery.trim())}&db_path=${encodeURIComponent(this.activeDb)}`);
+                    this.globalSearchResults = await res.json();
+                    this.globalSearchLoading = false;
+                    setTimeout(() => lucide.createIcons(), 100);
+                },
+
+                jumpToSearchResultTable(tableName, searchVal) {
+                    this.showGlobalSearchModal = false;
+                    this.selectTable(tableName);
+                    this.searchQuery = searchVal;
+                    this.loadData();
+                    this.activeTab = 'data';
+                    this.showToast(`Jumped to '${tableName}' with search filter applied!`, 'success');
                 },
 
                 async loadSchema() {
