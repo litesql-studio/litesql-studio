@@ -200,7 +200,7 @@ class LiteEngine {
         ];
     }
 
-    public function getData(string $table, int $page = 1, int $limit = 25, string $sort = '', string $dir = 'ASC', string $search = ''): array {
+    public function getData(string $table, int $page = 1, int $limit = 25, string $sort = '', string $dir = 'ASC', string $search = '', array $filters = [], string $filterLogic = 'AND'): array {
         if (!$this->pdo) return ['rows' => [], 'total' => 0, 'columns' => []];
         $quotedTable = $this->quoteIdentifier($table);
 
@@ -210,13 +210,53 @@ class LiteEngine {
 
         $whereClause = '';
         $params = [];
+        $allConditions = [];
+
         if ($search !== '' && count($columns) > 0) {
-            $conditions = [];
+            $searchConditions = [];
             foreach ($columns as $col) {
-                $conditions[] = $this->quoteIdentifier($col) . " LIKE ?";
+                $searchConditions[] = $this->quoteIdentifier($col) . " LIKE ?";
                 $params[] = '%' . $search . '%';
             }
-            $whereClause = ' WHERE ' . implode(' OR ', $conditions);
+            $allConditions[] = '(' . implode(' OR ', $searchConditions) . ')';
+        }
+
+        if (!empty($filters) && is_array($filters)) {
+            $filterConditions = [];
+            $logic = strtoupper($filterLogic) === 'OR' ? ' OR ' : ' AND ';
+
+            foreach ($filters as $f) {
+                $fCol = $f['column'] ?? '';
+                $fOp = strtoupper(trim($f['op'] ?? '='));
+                $fVal = $f['value'] ?? '';
+
+                if (!in_array($fCol, $columns, true)) continue;
+
+                $quotedCol = $this->quoteIdentifier($fCol);
+
+                if ($fOp === 'IS NULL') {
+                    $filterConditions[] = "{$quotedCol} IS NULL";
+                } elseif ($fOp === 'IS NOT NULL') {
+                    $filterConditions[] = "{$quotedCol} IS NOT NULL";
+                } elseif (in_array($fOp, ['=', '!=', '>', '<', '>=', '<='], true)) {
+                    $filterConditions[] = "{$quotedCol} {$fOp} ?";
+                    $params[] = $fVal;
+                } elseif ($fOp === 'LIKE') {
+                    $filterConditions[] = "{$quotedCol} LIKE ?";
+                    $params[] = '%' . $fVal . '%';
+                } elseif ($fOp === 'NOT LIKE') {
+                    $filterConditions[] = "{$quotedCol} NOT LIKE ?";
+                    $params[] = '%' . $fVal . '%';
+                }
+            }
+
+            if (!empty($filterConditions)) {
+                $allConditions[] = '(' . implode($logic, $filterConditions) . ')';
+            }
+        }
+
+        if (!empty($allConditions)) {
+            $whereClause = ' WHERE ' . implode(' AND ', $allConditions);
         }
 
         $countSql = "SELECT COUNT(*) as cnt FROM $quotedTable" . $whereClause;
@@ -2115,8 +2155,11 @@ if (isset($_GET['api'])) {
             $sort = $_GET['sort'] ?? '';
             $dir = $_GET['dir'] ?? 'ASC';
             $search = $_GET['search'] ?? '';
+            $filtersJson = $_GET['filters'] ?? '[]';
+            $filterLogic = $_GET['filter_logic'] ?? 'AND';
+            $filters = json_decode($filtersJson, true) ?: [];
 
-            echo json_encode($engine->getData($table, $page, $limit, $sort, $dir, $search));
+            echo json_encode($engine->getData($table, $page, $limit, $sort, $dir, $search, $filters, $filterLogic));
             break;
 
         case 'update_cell':
@@ -2815,12 +2858,19 @@ if (isset($_GET['api'])) {
                         <!-- TAB 1: EXCEL-STYLE DATA GRID (Double-Click Inline Editing, Row Action Edit & Bulk Actions) -->
                         <div x-show="activeTab === 'data'" class="flex-1 flex flex-col overflow-hidden relative">
                             <div class="p-3 bg-slate-50/60 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-4 shrink-0">
-                                <div class="flex items-center gap-2 flex-1 max-w-md">
+                                <div class="flex items-center gap-2 flex-1 max-w-lg">
                                     <div class="relative w-full">
                                         <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
                                         <input type="text" x-model="dataSearch" @keyup.enter="loadData()" placeholder="Search across all columns..." class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500">
                                     </div>
                                     <button @click="loadData()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs px-3 py-1.5 rounded-xl transition font-medium">Search</button>
+
+                                    <!-- MULTI-COLUMN VISUAL FILTER TOGGLE BUTTON -->
+                                    <button type="button" @click="showFilterBuilder = !showFilterBuilder; if (showFilterBuilder && dataFilters.length === 0) addFilterRule()" :class="dataFilters.length > 0 ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/40 font-bold shadow-xs' : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-800'" class="px-3 py-1.5 rounded-xl border text-xs transition flex items-center gap-1.5 active:scale-95 shrink-0" title="Toggle Multi-Column Visual Filter Builder">
+                                        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-sky-500"></i>
+                                        <span>Filters</span>
+                                        <span x-show="dataFilters.length > 0" x-cloak class="text-[10px] bg-sky-600 text-white font-bold px-1.5 py-0.2 rounded-full" x-text="dataFilters.length"></span>
+                                    </button>
                                 </div>
 
                                 <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -2840,6 +2890,72 @@ if (isset($_GET['api'])) {
                                         <span class="px-2 font-mono" x-text="currentPage + ' / ' + totalPages"></span>
                                         <button @click="currentPage < totalPages && (currentPage++, loadData())" :disabled="currentPage >= totalPages" class="p-1 rounded-lg border border-slate-300 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-30"><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- COLLAPSIBLE MULTI-COLUMN VISUAL FILTER BUILDER PANEL -->
+                            <div x-show="showFilterBuilder" x-cloak class="p-3.5 bg-slate-100/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800/80 space-y-3 shrink-0 shadow-inner">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="sliders-horizontal" class="w-4 h-4 text-sky-500"></i>
+                                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Multi-Column Visual Filter Builder</span>
+                                        
+                                        <div class="flex items-center bg-white dark:bg-slate-950 p-0.5 rounded-xl border border-slate-300 dark:border-slate-800 text-[11px] ml-2">
+                                            <button type="button" @click="filterLogic = 'AND'; applyFilters()" :class="filterLogic === 'AND' ? 'bg-sky-600 text-white font-bold' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'" class="px-2.5 py-0.5 rounded-lg transition">Match ALL (AND)</button>
+                                            <button type="button" @click="filterLogic = 'OR'; applyFilters()" :class="filterLogic === 'OR' ? 'bg-purple-600 text-white font-bold' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'" class="px-2.5 py-0.5 rounded-lg transition">Match ANY (OR)</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" @click="addFilterRule()" class="bg-sky-600/10 hover:bg-sky-600/20 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-xs font-semibold px-3 py-1 rounded-xl transition flex items-center gap-1">
+                                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                            <span>Add Rule</span>
+                                        </button>
+                                        <button type="button" @click="clearAllFilters()" class="text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-medium px-2 py-1 transition">Clear All</button>
+                                        <button type="button" @click="showFilterBuilder = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+                                    </div>
+                                </div>
+
+                                <!-- FILTER RULES LIST -->
+                                <div class="space-y-2">
+                                    <template x-for="(rule, rIdx) in dataFilters" :key="rIdx">
+                                        <div class="flex flex-wrap items-center gap-2 bg-white dark:bg-slate-950 p-2 rounded-2xl border border-slate-200 dark:border-slate-800/80 shadow-xs">
+                                            <!-- 1. Column Selector -->
+                                            <select x-model="rule.column" @change="applyFilters()" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-mono focus:outline-none focus:border-sky-500">
+                                                <template x-for="col in tableColumns" :key="col.name">
+                                                    <option :value="col.name" x-text="col.name + ' (' + (col.type || 'TEXT') + ')'"></option>
+                                                </template>
+                                            </select>
+
+                                            <!-- 2. Operator Selector -->
+                                            <select x-model="rule.op" @change="applyFilters()" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:border-sky-500">
+                                                <option value="LIKE">contains (LIKE)</option>
+                                                <option value="=">equals (=)</option>
+                                                <option value="!=">not equals (!=)</option>
+                                                <option value="NOT LIKE">does not contain</option>
+                                                <option value=">">greater than (&gt;)</option>
+                                                <option value="<">less than (&lt;)</option>
+                                                <option value=">=">greater or equal (&gt;=)</option>
+                                                <option value="<=">less or equal (&lt;=)</option>
+                                                <option value="IS NULL">is NULL</option>
+                                                <option value="IS NOT NULL">is NOT NULL</option>
+                                            </select>
+
+                                            <!-- 3. Value Input -->
+                                            <template x-if="rule.op !== 'IS NULL' && rule.op !== 'IS NOT NULL'">
+                                                <input type="text" x-model="rule.value" @keyup.enter="applyFilters()" @change="applyFilters()" placeholder="Enter filter value..." class="flex-1 min-w-[160px] bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-sky-500 font-mono">
+                                            </template>
+
+                                            <!-- 4. Remove Rule Button -->
+                                            <button type="button" @click="removeFilterRule(rIdx)" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-xl transition" title="Remove Rule"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                        </div>
+                                    </template>
+
+                                    <template x-if="dataFilters.length === 0">
+                                        <div class="text-xs text-slate-400 dark:text-slate-500 italic py-2 text-center bg-white/50 dark:bg-slate-950/50 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
+                                            No active filter conditions. Click "+ Add Rule" above to filter by specific columns.
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
 
@@ -5425,6 +5541,9 @@ if (isset($_GET['api'])) {
                 sortColumn: '',
                 sortDir: 'ASC',
                 dataSearch: '',
+                showFilterBuilder: false,
+                dataFilters: [],
+                filterLogic: 'AND',
                 loading: false,
 
                 editingCell: { row: null, col: null, value: '' },
@@ -5954,10 +6073,31 @@ if (isset($_GET['api'])) {
                     }
                 },
 
+                addFilterRule() {
+                    const firstCol = (this.tableColumns && this.tableColumns.length > 0) ? this.tableColumns[0].name : '';
+                    this.dataFilters.push({ column: firstCol, op: 'LIKE', value: '' });
+                },
+
+                removeFilterRule(idx) {
+                    this.dataFilters.splice(idx, 1);
+                    this.loadData();
+                },
+
+                clearAllFilters() {
+                    this.dataFilters = [];
+                    this.loadData();
+                },
+
+                applyFilters() {
+                    this.currentPage = 1;
+                    this.loadData();
+                },
+
                 async loadData() {
                     if (!this.activeTable) return;
                     this.loading = true;
-                    const url = `?api=data&table=${encodeURIComponent(this.activeTable)}&page=${this.currentPage}&limit=${this.pageLimit}&sort=${encodeURIComponent(this.sortColumn)}&dir=${this.sortDir}&search=${encodeURIComponent(this.dataSearch)}&db_path=${encodeURIComponent(this.activeDb)}`;
+                    const filtersParam = encodeURIComponent(JSON.stringify(this.dataFilters));
+                    const url = `?api=data&table=${encodeURIComponent(this.activeTable)}&page=${this.currentPage}&limit=${this.pageLimit}&sort=${encodeURIComponent(this.sortColumn)}&dir=${this.sortDir}&search=${encodeURIComponent(this.dataSearch)}&filters=${filtersParam}&filter_logic=${this.filterLogic}&db_path=${encodeURIComponent(this.activeDb)}`;
                     const res = await fetch(url);
                     const data = await res.json();
 

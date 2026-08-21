@@ -50,6 +50,7 @@ Outdated tools like **phpLiteAdmin** and **Adminer** were built over a decade ag
 ## ⚡ Key Features
 
 ### 📊 1. Data Grid & Record CRUD
+- **🎛️ Data Grid Multi-Column Visual Filter Builder**: Filter records visually by multiple conditions (`=`, `LIKE`, `!=`, `>`, `<`, `IS NULL`) with `AND` / `OR` logic without writing raw SQL.
 - **🔍 Global Database Search**: Search any keyword across ALL database tables simultaneously with match highlighting and 1-click table jump.
 - **Excel-Style Inline Editing**: Double-click any cell to edit and save values via AJAX.
 - **Bulk Record Management**: Select multiple rows to perform batch deletion or multi-row record updates.
