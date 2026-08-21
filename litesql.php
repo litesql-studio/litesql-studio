@@ -2739,11 +2739,13 @@ if (isset($_GET['api'])) {
                                 <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
                                     <span x-text="'Total: ' + totalRows + ' rows'"></span>
 
-                                    <select x-model="pageLimit" @change="loadData()" class="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-2 py-1 text-xs text-slate-800 dark:text-slate-200">
+                                    <select x-model="pageLimit" @change="currentPage = 1; loadData()" class="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-2 py-1 text-xs text-slate-800 dark:text-slate-200">
                                         <option value="10">10 / page</option>
                                         <option value="25">25 / page</option>
                                         <option value="50">50 / page</option>
                                         <option value="100">100 / page</option>
+                                        <option value="250">250 / page</option>
+                                        <option value="500">500 / page</option>
                                     </select>
 
                                     <div class="flex items-center gap-1">
@@ -3305,10 +3307,35 @@ if (isset($_GET['api'])) {
                             </template>
 
                             <div class="bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-2xl flex flex-col shadow-sm min-h-[300px]">
-                                <div class="p-3 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs font-medium">
-                                    <span class="text-slate-500 dark:text-slate-400 font-semibold">Query Output Result</span>
+                                <div class="p-3 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between text-xs font-medium gap-3">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-slate-500 dark:text-slate-400 font-semibold">Query Output Result</span>
+                                        <template x-if="queryResult.type === 'select' && queryResult.rows">
+                                            <span class="text-[10px] bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-full font-mono font-bold" x-text="queryResult.rows.length + ' rows fetched'"></span>
+                                        </template>
+                                    </div>
 
                                     <div class="flex items-center gap-3">
+                                        <!-- SQL Results Pagination Controls Header -->
+                                        <template x-if="queryResult.type === 'select' && queryResult.rows && queryResult.rows.length > 0">
+                                            <div class="flex items-center gap-2 border-r border-slate-200 dark:border-slate-800 pr-3">
+                                                <select x-model="queryPageLimit" @change="queryPage = 1" class="bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-0.5 text-[11px] font-semibold text-slate-800 dark:text-slate-200 focus:outline-none">
+                                                    <option value="25">25 / page</option>
+                                                    <option value="50">50 / page</option>
+                                                    <option value="100">100 / page</option>
+                                                    <option value="250">250 / page</option>
+                                                    <option value="500">500 / page</option>
+                                                    <option value="all">All Rows</option>
+                                                </select>
+
+                                                <div x-show="queryPageLimit !== 'all' && totalQueryPages > 1" class="flex items-center gap-1 text-[11px]">
+                                                    <button @click="queryPage > 1 && queryPage--" :disabled="queryPage <= 1" class="p-1 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-30"><i data-lucide="chevron-left" class="w-3 h-3"></i></button>
+                                                    <span class="px-1 font-mono text-slate-700 dark:text-slate-300" x-text="queryPage + ' / ' + totalQueryPages"></span>
+                                                    <button @click="queryPage < totalQueryPages && queryPage++" :disabled="queryPage >= totalQueryPages" class="p-1 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-30"><i data-lucide="chevron-right" class="w-3 h-3"></i></button>
+                                                </div>
+                                            </div>
+                                        </template>
+
                                         <!-- View Mode Switcher -->
                                         <div class="flex items-center bg-slate-200 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-300 dark:border-slate-700 text-[11px]">
                                             <button @click="queryViewMode = 'grid'" :class="queryViewMode === 'grid' ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 font-bold shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'" class="px-2.5 py-1 rounded transition flex items-center gap-1">
@@ -3385,9 +3412,9 @@ if (isset($_GET['api'])) {
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono text-slate-800 dark:text-slate-300">
-                                                <template x-for="(r, idx) in queryResult.rows" :key="idx">
+                                                <template x-for="(r, idx) in pagedQueryRows" :key="idx">
                                                     <tr class="hover:bg-slate-100 dark:hover:bg-slate-800/40">
-                                                        <td class="p-2.5 text-center text-slate-400 border-r border-slate-200 dark:border-slate-800/60" x-text="idx + 1"></td>
+                                                        <td class="p-2.5 text-center text-slate-400 border-r border-slate-200 dark:border-slate-800/60" x-text="(queryPageLimit === 'all' ? 0 : (queryPage - 1) * parseInt(queryPageLimit || 50)) + idx + 1"></td>
                                                         <template x-for="col in queryResult.columns" :key="col">
                                                             <td class="p-2.5 border-r border-slate-200 dark:border-slate-800/60" x-text="r[col]"></td>
                                                         </template>
@@ -3401,6 +3428,28 @@ if (isset($_GET['api'])) {
                                                 </template>
                                             </tbody>
                                         </table>
+                                    </template>
+
+                                    <!-- SQL Results Bottom Pagination Summary Bar -->
+                                    <template x-if="queryResult.type === 'select' && queryResult.rows && queryResult.rows.length > 0">
+                                        <div class="p-3 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium gap-3 rounded-b-2xl">
+                                            <div class="flex items-center gap-2">
+                                                <i data-lucide="layers" class="w-3.5 h-3.5 text-sky-500"></i>
+                                                <span x-text="'Showing ' + (queryPageLimit === 'all' ? 1 : ((queryPage - 1) * parseInt(queryPageLimit || 50) + 1)) + ' to ' + (queryPageLimit === 'all' ? queryResult.rows.length : Math.min(queryPage * parseInt(queryPageLimit || 50), queryResult.rows.length)) + ' of ' + queryResult.rows.length + ' fetched rows'"></span>
+                                            </div>
+
+                                            <div class="flex items-center gap-2">
+                                                <button @click="queryPage > 1 && queryPage--" :disabled="queryPage <= 1" class="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-30 font-semibold text-[11px] flex items-center gap-1 transition">
+                                                    <i data-lucide="chevron-left" class="w-3 h-3"></i>
+                                                    <span>Previous</span>
+                                                </button>
+                                                <span class="font-mono text-[11px] text-slate-800 dark:text-slate-200 px-2" x-text="'Page ' + queryPage + ' of ' + totalQueryPages"></span>
+                                                <button @click="queryPage < totalQueryPages && queryPage++" :disabled="queryPage >= totalQueryPages" class="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-30 font-semibold text-[11px] flex items-center gap-1 transition">
+                                                    <span>Next</span>
+                                                    <i data-lucide="chevron-right" class="w-3 h-3"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </template>
 
                                     <!-- CHART VISUALIZER VIEW -->
@@ -5155,6 +5204,23 @@ if (isset($_GET['api'])) {
                 chartValCol: '',
                 autoSafetyLimit: true,
 
+                queryPage: 1,
+                queryPageLimit: '50',
+
+                get pagedQueryRows() {
+                    if (!this.queryResult || !this.queryResult.rows) return [];
+                    if (this.queryPageLimit === 'all') return this.queryResult.rows;
+                    const limit = parseInt(this.queryPageLimit) || 50;
+                    const start = (this.queryPage - 1) * limit;
+                    return this.queryResult.rows.slice(start, start + limit);
+                },
+
+                get totalQueryPages() {
+                    if (!this.queryResult || !this.queryResult.rows || this.queryPageLimit === 'all') return 1;
+                    const limit = parseInt(this.queryPageLimit) || 50;
+                    return Math.max(1, Math.ceil(this.queryResult.rows.length / limit));
+                },
+
                 showCreateViewModal: false,
                 newViewName: '',
                 newViewSql: '',
@@ -5855,6 +5921,7 @@ if (isset($_GET['api'])) {
                 async runQuery() {
                     if (!this.sqlQuery.trim()) return;
                     this.queryPlanData = {};
+                    this.queryPage = 1;
 
                     const res = await fetch(`?api=query&db_path=${encodeURIComponent(this.activeDb)}`, {
                         method: 'POST',
