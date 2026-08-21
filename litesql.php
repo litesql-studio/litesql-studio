@@ -3798,37 +3798,33 @@ self.addEventListener('fetch', (e) => {
 
                                     <!-- CHART & GRAPH VISUALIZER VIEW -->
                                     <template x-if="queryResult.type === 'select' && queryViewMode === 'chart'">
-                                        <div class="space-y-4 p-2">
+                                        <div class="space-y-4 p-4 bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl">
                                             <!-- CHART CONTROLS TOOLBAR -->
-                                            <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xs">
+                                            <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800 text-xs">
                                                 <!-- 1. Chart Type Selector -->
                                                 <div class="flex items-center gap-2">
-                                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Chart Type:</span>
-                                                    <div class="flex items-center bg-white dark:bg-slate-950 p-1 rounded-xl border border-slate-300 dark:border-slate-800 text-xs">
-                                                        <button type="button" @click="chartType = 'bar'" :class="chartType === 'bar' ? 'bg-sky-600 text-white font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'" class="px-3 py-1 rounded-lg transition flex items-center gap-1.5">
+                                                    <span class="font-bold text-slate-400 uppercase tracking-wider text-[11px]">Chart Type:</span>
+                                                    <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                                                        <button type="button" @click="chartType = 'bar'" :class="chartType === 'bar' ? 'bg-sky-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1 rounded-lg transition flex items-center gap-1.5">
                                                             <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>
                                                             <span>Bar</span>
                                                         </button>
-                                                        <button type="button" @click="chartType = 'line'" :class="chartType === 'line' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'" class="px-3 py-1 rounded-lg transition flex items-center gap-1.5">
+                                                        <button type="button" @click="chartType = 'line'" :class="chartType === 'line' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1 rounded-lg transition flex items-center gap-1.5">
                                                             <i data-lucide="line-chart" class="w-3.5 h-3.5"></i>
-                                                            <span>Line</span>
+                                                            <span>Progress</span>
                                                         </button>
-                                                        <button type="button" @click="chartType = 'pie'" :class="chartType === 'pie' ? 'bg-purple-600 text-white font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'" class="px-3 py-1 rounded-lg transition flex items-center gap-1.5">
+                                                        <button type="button" @click="chartType = 'pie'" :class="chartType === 'pie' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-3 py-1 rounded-lg transition flex items-center gap-1.5">
                                                             <i data-lucide="pie-chart" class="w-3.5 h-3.5"></i>
-                                                            <span>Pie</span>
-                                                        </button>
-                                                        <button type="button" @click="chartType = 'donut'" :class="chartType === 'donut' ? 'bg-amber-600 text-white font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'" class="px-3 py-1 rounded-lg transition flex items-center gap-1.5">
-                                                            <i data-lucide="disc" class="w-3.5 h-3.5"></i>
-                                                            <span>Donut</span>
+                                                            <span>Ratio</span>
                                                         </button>
                                                     </div>
                                                 </div>
 
-                                                <!-- 2. Column Mapping Pickers -->
+                                                <!-- 2. Column Mapping Selectors -->
                                                 <div class="flex flex-wrap items-center gap-3">
                                                     <div class="flex items-center gap-1.5">
-                                                        <span class="text-xs text-slate-500 font-semibold">Label Column (X):</span>
-                                                        <select x-model="chartLabelCol" class="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 font-mono">
+                                                        <span class="text-slate-400 font-semibold">Label Column (X):</span>
+                                                        <select x-model="chartLabelCol" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-sky-500">
                                                             <template x-for="c in queryResult.columns" :key="c">
                                                                 <option :value="c" x-text="c"></option>
                                                             </template>
@@ -3836,8 +3832,8 @@ self.addEventListener('fetch', (e) => {
                                                     </div>
 
                                                     <div class="flex items-center gap-1.5">
-                                                        <span class="text-xs text-slate-500 font-semibold">Value Column (Y):</span>
-                                                        <select x-model="chartValCol" class="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 font-mono">
+                                                        <span class="text-slate-400 font-semibold">Value Column (Y):</span>
+                                                        <select x-model="chartValCol" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-sky-500">
                                                             <template x-for="c in queryResult.columns" :key="c">
                                                                 <option :value="c" x-text="c"></option>
                                                             </template>
@@ -3852,87 +3848,65 @@ self.addEventListener('fetch', (e) => {
                                                 </div>
                                             </div>
 
-                                            <!-- VECTOR SVG HIGH-RES CANVAS CHART CONTAINER -->
-                                            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative overflow-hidden shadow-2xl min-h-[380px] flex items-center justify-center">
-                                                <svg id="litesql-chart-svg" viewBox="0 0 800 360" class="w-full h-80 overflow-visible">
-                                                    <!-- BAR CHART RENDER -->
-                                                    <template x-if="chartType === 'bar'">
-                                                        <g>
-                                                            <!-- Grid lines -->
-                                                            <line x1="60" y1="40" x2="760" y2="40" stroke="#1e293b" stroke-dasharray="4 4" />
-                                                            <line x1="60" y1="110" x2="760" y2="110" stroke="#1e293b" stroke-dasharray="4 4" />
-                                                            <line x1="60" y1="180" x2="760" y2="180" stroke="#1e293b" stroke-dasharray="4 4" />
-                                                            <line x1="60" y1="250" x2="760" y2="250" stroke="#1e293b" stroke-dasharray="4 4" />
-                                                            <line x1="60" y1="290" x2="760" y2="290" stroke="#334155" stroke-width="2" />
+                                            <!-- CHART CANVAS RENDER CONTAINER -->
+                                            <div id="litesql-chart-svg" class="bg-slate-950 p-6 border border-slate-800/80 rounded-2xl">
+                                                <!-- BAR CHART -->
+                                                <div x-show="chartType === 'bar'" class="space-y-4">
+                                                    <div class="flex items-end justify-between gap-3 h-64 pt-8 pb-3 px-4 bg-slate-900/60 border border-slate-800/80 rounded-2xl relative overflow-hidden">
+                                                        <template x-for="(lbl, i) in queryChartData.labels" :key="i">
+                                                            <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group relative min-w-[24px]">
+                                                                <!-- Tooltip on hover -->
+                                                                <div class="absolute -top-9 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-slate-800 border border-slate-700 text-white text-[11px] font-mono px-2.5 py-1 rounded-xl shadow-xl pointer-events-none z-30 whitespace-nowrap" x-text="lbl + ': ' + (queryChartData.values[i] !== undefined ? queryChartData.values[i].toLocaleString() : 0)"></div>
 
-                                                            <template x-for="(lbl, idx) in queryChartData.labels" :key="idx">
-                                                                <g>
-                                                                    <!-- Bar Rect -->
-                                                                    <rect :x="70 + idx * ((680) / Math.max(1, queryChartData.labels.length))"
-                                                                          :y="290 - (queryChartData.values[idx] / queryChartData.maxVal) * 240"
-                                                                          :width="Math.max(8, (680 / Math.max(1, queryChartData.labels.length)) * 0.65)"
-                                                                          :height="(queryChartData.values[idx] / queryChartData.maxVal) * 240"
-                                                                          rx="6"
-                                                                          fill="url(#barGradient)"
-                                                                          class="transition-all duration-300 hover:opacity-80 cursor-pointer">
-                                                                        <title x-text="lbl + ': ' + queryChartData.values[idx]"></title>
-                                                                    </rect>
+                                                                <!-- Animated Bar Fill -->
+                                                                <div class="w-full max-w-[48px] bg-gradient-to-t from-sky-600 via-teal-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 rounded-t-xl transition-all duration-500 shadow-lg shadow-sky-500/20" :style="'height: ' + Math.max(6, (queryChartData.values[i] / queryChartData.maxVal) * 100) + '%'"></div>
+                                                            </div>
+                                                        </template>
+                                                    </div>
 
-                                                                    <!-- Label below bar -->
-                                                                    <text :x="70 + idx * ((680) / Math.max(1, queryChartData.labels.length)) + (680 / Math.max(1, queryChartData.labels.length)) * 0.3"
-                                                                          y="312"
-                                                                          fill="#94a3b8"
-                                                                          font-size="10"
-                                                                          font-family="monospace"
-                                                                          text-anchor="middle"
-                                                                          x-text="lbl.length > 8 ? lbl.substring(0,6) + '..' : lbl"></text>
-                                                                </g>
-                                                            </template>
+                                                    <!-- X-Axis Labels -->
+                                                    <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 px-4 truncate">
+                                                        <template x-for="(lbl, i) in queryChartData.labels" :key="i">
+                                                            <span class="truncate text-center flex-1 px-1 font-semibold text-slate-300" x-text="lbl"></span>
+                                                        </template>
+                                                    </div>
+                                                </div>
 
-                                                            <defs>
-                                                                <linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                    <stop offset="0%" stop-color="#38bdf8" />
-                                                                    <stop offset="100%" stop-color="#0284c7" />
-                                                                </linearGradient>
-                                                            </defs>
-                                                        </g>
+                                                <!-- LINE / PROGRESS -->
+                                                <div x-show="chartType === 'line'" class="space-y-3">
+                                                    <template x-for="(lbl, i) in queryChartData.labels" :key="i">
+                                                        <div class="p-3 bg-slate-900 border border-slate-800/80 rounded-2xl space-y-1.5 font-mono text-xs hover:border-slate-700 transition">
+                                                            <div class="flex items-center justify-between">
+                                                                <span class="font-bold text-slate-200 flex items-center gap-2">
+                                                                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                                                    <span x-text="lbl"></span>
+                                                                </span>
+                                                                <span class="text-emerald-400 font-extrabold" x-text="(queryChartData.values[i] !== undefined ? queryChartData.values[i].toLocaleString() : 0)"></span>
+                                                            </div>
+                                                            <div class="w-full bg-slate-950 rounded-full h-3 overflow-hidden border border-slate-800">
+                                                                <div class="bg-gradient-to-r from-emerald-500 via-teal-400 to-sky-500 h-full rounded-full transition-all duration-500" :style="'width: ' + Math.min(100, Math.max(2, (queryChartData.values[i] / queryChartData.maxVal) * 100)) + '%'"></div>
+                                                            </div>
+                                                        </div>
                                                     </template>
+                                                </div>
 
-                                                    <!-- LINE CHART RENDER -->
-                                                    <template x-if="chartType === 'line'">
-                                                        <g>
-                                                            <line x1="60" y1="290" x2="760" y2="290" stroke="#334155" stroke-width="2" />
-                                                            <path :d="queryChartData.labels.map((lbl, i) => (i === 0 ? 'M' : 'L') + (70 + i * (680 / Math.max(1, queryChartData.labels.length))) + ' ' + (290 - (queryChartData.values[i] / queryChartData.maxVal) * 240)).join(' ')"
-                                                                  fill="none" stroke="#10b981" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
-
-                                                            <template x-for="(lbl, idx) in queryChartData.labels" :key="idx">
-                                                                <circle :cx="70 + idx * (680 / Math.max(1, queryChartData.labels.length))"
-                                                                        :cy="290 - (queryChartData.values[idx] / queryChartData.maxVal) * 240"
-                                                                        r="5" fill="#10b981" stroke="#0f172a" stroke-width="2">
-                                                                    <title x-text="lbl + ': ' + queryChartData.values[idx]"></title>
-                                                                </circle>
-                                                            </template>
-                                                        </g>
+                                                <!-- PIE / RATIO DISTRIBUTION -->
+                                                <div x-show="chartType === 'pie'" class="space-y-3">
+                                                    <template x-for="(lbl, i) in queryChartData.labels" :key="i">
+                                                        <div class="p-3.5 bg-slate-900 border border-slate-800/80 rounded-2xl space-y-2 font-mono text-xs hover:border-slate-700 transition">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="flex items-center gap-2">
+                                                                    <div class="w-3 h-3 rounded-full" :style="'background-color: ' + ['#38bdf8', '#10b981', '#a855f7', '#f59e0b', '#f43f5e', '#06b6d4', '#ec4899', '#84cc16'][i % 8]"></div>
+                                                                    <span class="font-bold text-slate-200" x-text="lbl"></span>
+                                                                </div>
+                                                                <span class="font-extrabold text-sky-400" x-text="(queryChartData.values[i] !== undefined ? queryChartData.values[i].toLocaleString() : 0) + ' (' + Math.round(((queryChartData.values[i] || 0) / (queryChartData.totalSum || 1)) * 100) + '%)'"></span>
+                                                            </div>
+                                                            <div class="w-full bg-slate-950 rounded-full h-3 overflow-hidden border border-slate-800">
+                                                                <div class="h-full rounded-full transition-all duration-500" :style="'width: ' + Math.min(100, Math.max(2, ((queryChartData.values[i] || 0) / (queryChartData.totalSum || 1)) * 100)) + '%; background-color: ' + ['#38bdf8', '#10b981', '#a855f7', '#f59e0b', '#f43f5e', '#06b6d4', '#ec4899', '#84cc16'][i % 8]"></div>
+                                                            </div>
+                                                        </div>
                                                     </template>
-
-                                                    <!-- PIE & DONUT CHART RENDER -->
-                                                    <template x-if="chartType === 'pie' || chartType === 'donut'">
-                                                        <g transform="translate(400, 170)">
-                                                            <circle r="120" fill="#1e293b" />
-                                                            <template x-for="(lbl, idx) in queryChartData.labels.slice(0, 8)" :key="idx">
-                                                                <path :d="'M 0 0 L ' + (120 * Math.cos((idx * (2 * Math.PI / Math.min(8, queryChartData.labels.length))))) + ' ' + (120 * Math.sin((idx * (2 * Math.PI / Math.min(8, queryChartData.labels.length))))) + ' A 120 120 0 0 1 ' + (120 * Math.cos(((idx + 1) * (2 * Math.PI / Math.min(8, queryChartData.labels.length))))) + ' ' + (120 * Math.sin(((idx + 1) * (2 * Math.PI / Math.min(8, queryChartData.labels.length))))) + ' Z'"
-                                                                      :fill="['#0284c7', '#10b981', '#a855f7', '#f59e0b', '#f43f5e', '#06b6d4', '#ec4899', '#84cc16'][idx % 8]" stroke="#0f172a" stroke-width="2">
-                                                                    <title x-text="lbl + ': ' + queryChartData.values[idx]"></title>
-                                                                </path>
-                                                            </template>
-
-                                                            <!-- Donut Hole Cutout -->
-                                                            <template x-if="chartType === 'donut'">
-                                                                <circle r="60" fill="#0f172a" />
-                                                            </template>
-                                                        </g>
-                                                    </template>
-                                                </svg>
+                                                </div>
                                             </div>
                                         </div>
                                     </template>
@@ -5952,22 +5926,16 @@ self.addEventListener('fetch', (e) => {
                     const rows = this.queryResult.rows;
                     const cols = this.queryResult.columns;
 
-                    let labelCol = this.chartLabelCol;
-                    let valCol = this.chartValCol;
+                    const labelCol = (this.chartLabelCol && cols.includes(this.chartLabelCol)) ? this.chartLabelCol : cols[0];
+                    let valCol = (this.chartValCol && cols.includes(this.chartValCol)) ? this.chartValCol : '';
 
-                    if (!labelCol || !cols.includes(labelCol)) {
-                        labelCol = cols[0];
-                        this.chartLabelCol = labelCol;
-                    }
-
-                    if (!valCol || !cols.includes(valCol)) {
+                    if (!valCol) {
                         const numericStats = this.queryColumnStats;
                         if (numericStats && numericStats.length > 0) {
                             valCol = numericStats[0].column;
                         } else {
                             valCol = cols[1] || cols[0];
                         }
-                        this.chartValCol = valCol;
                     }
 
                     const labels = [];
