@@ -5281,7 +5281,7 @@ if (isset($_GET['api'])) {
                 <!-- Modal Header / Search Bar -->
                 <div class="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
                     <i data-lucide="search" class="w-5 h-5 text-sky-500 shrink-0"></i>
-                    <input type="text" x-ref="globalSearchInput" x-model="globalSearchQuery" @keyup.enter="performGlobalSearch()" placeholder="Search keyword across ALL database tables (e.g. 'Ghazipur', 'Sharma')..." class="w-full bg-transparent text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none" autofocus>
+                    <input type="text" x-ref="globalSearchInput" x-model="globalSearchQuery" @input.debounce.300ms="performGlobalSearch()" @keyup.enter="performGlobalSearch()" placeholder="Search studio actions, tables, or database records (e.g. 'theme', 'Ghazipur', 'iti_contacts')..." class="w-full bg-transparent text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none" autofocus>
                     
                     <button @click="performGlobalSearch()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shrink-0 flex items-center gap-1.5 shadow-md shadow-sky-600/20 active:scale-95">
                         <i :data-lucide="globalSearchLoading ? 'loader-2' : 'search'" class="w-3.5 h-3.5" :class="globalSearchLoading ? 'animate-spin' : ''"></i>
@@ -5292,8 +5292,32 @@ if (isset($_GET['api'])) {
 
                 <!-- Modal Body Results Area -->
                 <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                    <!-- SECTION 1: ⚡ QUICK ACTIONS & NAVIGATION -->
+                    <template x-if="cmdPaletteItems.length > 0">
+                        <div class="space-y-2.5">
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1 flex items-center justify-between">
+                                <span>⚡ Quick Actions & Studio Navigation</span>
+                                <span class="text-[10px] text-slate-400 font-mono" x-text="cmdPaletteItems.length + ' options'"></span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <template x-for="(item, itemIdx) in cmdPaletteItems.slice(0, 10)" :key="itemIdx">
+                                    <button @click="item.action(); showGlobalSearchModal = false" class="text-left p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 hover:border-sky-500/60 hover:bg-sky-500/5 transition flex items-center justify-between group active:scale-95">
+                                        <div class="flex items-center gap-2.5 truncate">
+                                            <div class="w-7 h-7 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-sky-500 shrink-0 group-hover:scale-110 transition">
+                                                <i :data-lucide="item.icon" class="w-3.5 h-3.5"></i>
+                                            </div>
+                                            <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate" x-text="item.title"></span>
+                                        </div>
+                                        <span class="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded-full shrink-0" x-text="item.type"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- SECTION 2: 📊 DATABASE TABLE RECORD MATCHES -->
                     <template x-if="globalSearchLoading">
-                        <div class="py-16 text-center space-y-3">
+                        <div class="py-12 text-center space-y-3">
                             <i data-lucide="loader-2" class="w-8 h-8 text-sky-500 animate-spin mx-auto"></i>
                             <p class="text-xs text-slate-500 font-mono">Searching all tables in active database...</p>
                         </div>
