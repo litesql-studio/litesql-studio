@@ -1817,6 +1817,21 @@ self.addEventListener('fetch', (e) => {
         }
     }
 
+    if ($api === 'check_db_mtime') {
+        header('Content-Type: application/json');
+        $dbPath = $_GET['db_path'] ?? $_SESSION['litesql_active_db'] ?? '';
+        if ($dbPath && file_exists($dbPath) && is_file($dbPath)) {
+            echo json_encode([
+                'success' => true,
+                'mtime' => filemtime($dbPath),
+                'size' => filesize($dbPath)
+            ]);
+        } else {
+            echo json_encode(['success' => false]);
+        }
+        exit;
+    }
+
     if ($api === 'download_all_zip') {
         $dbFiles = glob(__DIR__ . '/*.{sqlite,db,sqlite3,db3}', GLOB_BRACE);
         if (empty($dbFiles)) {
@@ -6355,6 +6370,10 @@ self.addEventListener('fetch', (e) => {
                 showBulkRenameColModal: false,
                 bulkColRenames: [],
 
+                lastDbMtime: 0,
+                lastDbSize: 0,
+                diskCheckTimer: null,
+
                 get cmdPaletteItems() {
                     const q = this.cmdSearch.toLowerCase().trim();
                     const items = [];
@@ -6524,6 +6543,7 @@ self.addEventListener('fetch', (e) => {
                         this.activeDb = data.active;
                         this.loadTables();
                         this.loadAnalytics();
+                        this.startDiskChangeListener();
                     } else if (this.databases.length > 0) {
                         this.selectDb(this.databases[0].path);
                     }
@@ -6559,9 +6579,33 @@ self.addEventListener('fetch', (e) => {
                     if (data.success) {
                         this.activeDb = path;
                         this.activeTable = '';
+                        this.lastDbMtime = 0;
+                        this.lastDbSize = 0;
                         this.loadTables();
                         this.loadAnalytics();
+                        this.startDiskChangeListener();
                     }
+                },
+
+                startDiskChangeListener() {
+                    if (this.diskCheckTimer) clearInterval(this.diskCheckTimer);
+                    this.diskCheckTimer = setInterval(async () => {
+                        if (!this.activeDb || !this.authenticated) return;
+                        try {
+                            const res = await fetch(`?api=check_db_mtime&db_path=${encodeURIComponent(this.activeDb)}`);
+                            const data = await res.json();
+                            if (data.success && data.mtime) {
+                                if (this.lastDbMtime && (data.mtime > this.lastDbMtime || data.size !== this.lastDbSize)) {
+                                    this.showToast('🔔 External database update detected on disk! Data refreshed.', 'info');
+                                    if (this.activeTab === 'data') this.loadData();
+                                    if (this.activeTab === 'analytics') this.loadAnalytics();
+                                    if (this.activeTab === 'structure') this.loadSchema();
+                                }
+                                this.lastDbMtime = data.mtime;
+                                this.lastDbSize = data.size;
+                            }
+                        } catch(e) {}
+                    }, 5000);
                 },
 
                 async vacuumDb() {
