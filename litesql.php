@@ -6260,13 +6260,13 @@ self.addEventListener('fetch', (e) => {
         <div>Page 1 of 1</div>
     </div>
 
-    <script>
+    <' + 'script>
         window.onload = function() {
             setTimeout(function() {
                 window.print();
             }, 300);
         };
-    <\/script>
+    </' + 'script>
 </body>
 </html>`;
 
@@ -6343,13 +6343,13 @@ self.addEventListener('fetch', (e) => {
         <div>Page 1 of 1</div>
     </div>
 
-    <script>
+    <' + 'script>
         window.onload = function() {
             setTimeout(function() {
                 window.print();
             }, 300);
         };
-    <\/script>
+    </' + 'script>
 </body>
 </html>`;
 
