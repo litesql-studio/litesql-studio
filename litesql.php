@@ -5611,7 +5611,7 @@ self.addEventListener('fetch', (e) => {
                                 <span class="text-[10px] text-slate-400 font-mono" x-text="cmdPaletteItems.length + ' options'"></span>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <template x-for="(item, itemIdx) in cmdPaletteItems.slice(0, 10)" :key="itemIdx">
+                                <template x-for="(item, itemIdx) in cmdPaletteItems" :key="itemIdx">
                                     <button @click="item.action(); showGlobalSearchModal = false" class="text-left p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 hover:border-sky-500/60 hover:bg-sky-500/5 transition flex items-center justify-between group active:scale-95">
                                         <div class="flex items-center gap-2.5 truncate">
                                             <div class="w-7 h-7 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-sky-500 shrink-0 group-hover:scale-110 transition">
