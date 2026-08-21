@@ -87,6 +87,7 @@ Outdated tools like **phpLiteAdmin** and **Adminer** were built over a decade ag
 - **📄 Schema DDL SQL Exporter**: Generate complete `.sql` migration DDL scripts for tables, indexes, triggers, and views with optional `DROP TABLE IF EXISTS` statements.
 - **🎲 Smart Mock Data Generator**: Populate test tables with realistic names, emails, phone numbers, locations, statuses, prices, and timestamps.
 - **📦 Multi-Database ZIP Backup Exporter**: Automatically detect and download all server `.sqlite` databases bundled into a single compressed ZIP archive.
+- **🔒 Password-Protected AES-256 Encrypted DB Export**: Compress and encrypt SQLite database files into password-protected `.zip` archives with 256-bit AES encryption.
 - **📱 PWA Standalone Desktop App Support**: Install LiteSQL Studio as a native standalone app on Windows, macOS, Linux, and Android with Web App Manifest (`manifest.json`), Service Worker (`sw.js`), and offline caching.
 - **⇄ Dual Database Diff & Schema Comparator**: Compare two server database files side-by-side to highlight missing tables, column mismatches, and row variances.
 

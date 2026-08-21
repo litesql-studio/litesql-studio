@@ -2398,6 +2398,57 @@ self.addEventListener('fetch', (e) => {
             }
             exit;
 
+        case 'export_encrypted_db':
+            $dbPath = $_GET['db_path'] ?? $engine->getDbPath();
+            $password = $_GET['password'] ?? '';
+
+            if (empty($password)) {
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Encryption password is required']);
+                exit;
+            }
+
+            if (!file_exists($dbPath)) {
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Database file not found']);
+                exit;
+            }
+
+            $dbFileName = basename($dbPath);
+            $zipFileName = pathinfo($dbFileName, PATHINFO_FILENAME) . '_protected_' . date('Ymd_His') . '.zip';
+            $tempZip = tempnam(sys_get_temp_dir(), 'litesql_enc_') . '.zip';
+
+            if (class_exists('ZipArchive')) {
+                $zip = new ZipArchive();
+                if ($zip->open($tempZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
+                    $zip->addFile($dbPath, $dbFileName);
+                    if (defined('ZipArchive::EM_AES_256')) {
+                        $zip->setEncryptionName($dbFileName, ZipArchive::EM_AES_256, $password);
+                    } else {
+                        $zip->setPassword($password);
+                    }
+                    $zip->close();
+
+                    header('Content-Type: application/zip');
+                    header('Content-Disposition: attachment; filename="' . $zipFileName . '"');
+                    header('Content-Length: ' . filesize($tempZip));
+                    readfile($tempZip);
+                    @unlink($tempZip);
+                    exit;
+                }
+            }
+
+            $cipher = 'aes-256-cbc';
+            $key = hash('sha256', $password, true);
+            $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length($cipher));
+            $plaintext = file_get_contents($dbPath);
+            $ciphertext = openssl_encrypt($plaintext, $cipher, $key, OPENSSL_RAW_DATA, $iv);
+
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename="' . pathinfo($dbFileName, PATHINFO_FILENAME) . '_aes256_' . date('Ymd_His') . '.litesql.enc"');
+            echo $iv . $ciphertext;
+            exit;
+
         case 'create_index':
             header('Content-Type: application/json');
             $input = json_decode(file_get_contents('php://input'), true);
@@ -2694,6 +2745,10 @@ self.addEventListener('fetch', (e) => {
                             <i data-lucide="hard-drive-download" class="w-3.5 h-3.5 text-emerald-500"></i>
                             <span>Backup DB File</span>
                         </a>
+                        <button @click="showEncryptedExportModal = true; open = false" class="w-full text-left p-2 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400 flex items-center gap-2 transition">
+                            <i data-lucide="lock" class="w-3.5 h-3.5 text-amber-500"></i>
+                            <span>Export Encrypted DB (.zip)</span>
+                        </button>
                         <button @click="openDbDiffModal(); open = false" class="w-full text-left p-2 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400 flex items-center gap-2 transition">
                             <i data-lucide="git-compare" class="w-3.5 h-3.5 text-amber-500"></i>
                             <span>Dual DB Diff Tool</span>
@@ -2914,6 +2969,10 @@ self.addEventListener('fetch', (e) => {
                                                 <i data-lucide="database" class="w-3.5 h-3.5 text-sky-500"></i>
                                                 <span>Export SQL Dump</span>
                                             </a>
+                                            <button @click="showEncryptedExportModal = true; open = false" class="w-full text-left flex items-center gap-2 p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400 transition font-medium border-t border-slate-100 dark:border-slate-800">
+                                                <i data-lucide="lock" class="w-3.5 h-3.5 text-amber-500"></i>
+                                                <span>Export Encrypted DB (.zip)</span>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -5573,6 +5632,54 @@ self.addEventListener('fetch', (e) => {
     </div>
     </div>
 
+    <!-- MODAL: EXPORT AES-256 ENCRYPTED DATABASE BACKUP -->
+    <template x-if="showEncryptedExportModal">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md" @click.self="showEncryptedExportModal = false" @keydown.escape.window="showEncryptedExportModal = false">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4" @click.stop>
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
+                            <i data-lucide="lock" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900 dark:text-white tracking-wide">Export Encrypted Database</h3>
+                            <p class="text-[10px] text-slate-400">Password-Protected AES-256 ZIP Backup</p>
+                        </div>
+                    </div>
+                    <button @click="showEncryptedExportModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+
+                <form @submit.prevent="downloadEncryptedDb()" class="space-y-4">
+                    <div class="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl text-xs space-y-1 text-amber-700 dark:text-amber-300">
+                        <div class="font-bold flex items-center gap-1.5">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-amber-500"></i>
+                            <span>256-Bit AES Encryption</span>
+                        </div>
+                        <p class="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">Your SQLite database file will be compressed and encrypted using AES-256. Standard unzipping utilities (7-Zip, WinRAR, macOS Archive Utility) will require this password to extract.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Set Backup Encryption Password</label>
+                        <input type="password" x-model="encryptedExportForm.password" placeholder="Enter password (e.g. MySecretKey123!)..." required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-sky-500 font-mono">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Confirm Password</label>
+                        <input type="password" x-model="encryptedExportForm.confirmPassword" placeholder="Re-enter password..." required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-sky-500 font-mono">
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <button type="button" @click="showEncryptedExportModal = false" class="px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Cancel</button>
+                        <button type="submit" class="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-lg shadow-amber-600/20 flex items-center gap-1.5 active:scale-95">
+                            <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i>
+                            <span>Download Encrypted .zip</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
     <!-- ALPINE APP REASONING & AJAX ENGINE -->
     <script>
         function litesqlApp() {
@@ -5588,6 +5695,9 @@ self.addEventListener('fetch', (e) => {
 
                 showSecurityModal: false,
                 securityForm: { currentPassword: '', newPassword: '', confirmPassword: '' },
+
+                showEncryptedExportModal: false,
+                encryptedExportForm: { password: '', confirmPassword: '' },
 
                 showCmdPalette: false,
                 cmdSearch: '',
@@ -5904,6 +6014,7 @@ self.addEventListener('fetch', (e) => {
                         { title: 'Upload Database File', icon: 'upload-cloud', action: () => { this.showUploadDbModal = true; } },
                         { title: 'Import Data (CSV/JSON)', icon: 'file-up', action: () => { this.showImportModal = true; } },
                         { title: 'Backup Database (.sqlite)', icon: 'hard-drive-download', action: () => { window.location.href = '?api=download_db&db_path=' + encodeURIComponent(this.activeDb); } },
+                        { title: '🔒 Export Encrypted Database (.zip)', icon: 'lock', action: () => { this.showEncryptedExportModal = true; } },
                         { title: 'Dual Database Diff', icon: 'git-compare', action: () => { this.openDbDiffModal(); } },
                         { title: 'Switch Theme: Day Light', icon: 'sun', action: () => { this.setTheme('light'); } },
                         { title: 'Switch Theme: Dark Night', icon: 'moon', action: () => { this.setTheme('dark'); } },
@@ -5950,6 +6061,21 @@ self.addEventListener('fetch', (e) => {
                         this.showToast('LiteSQL Studio App installed successfully!', 'success');
                     }
                     this.pwaInstallDeferred = null;
+                },
+
+                downloadEncryptedDb() {
+                    if (!this.encryptedExportForm.password) {
+                        this.showToast('Please enter an encryption password', 'error');
+                        return;
+                    }
+                    if (this.encryptedExportForm.password !== this.encryptedExportForm.confirmPassword) {
+                        this.showToast('Passwords do not match!', 'error');
+                        return;
+                    }
+                    window.location.href = `?api=export_encrypted_db&db_path=${encodeURIComponent(this.activeDb)}&password=${encodeURIComponent(this.encryptedExportForm.password)}`;
+                    this.showEncryptedExportModal = false;
+                    this.encryptedExportForm = { password: '', confirmPassword: '' };
+                    this.showToast('Encrypted backup download started!', 'success');
                 },
 
                 initApp() {
