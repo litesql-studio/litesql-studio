@@ -3162,6 +3162,11 @@ if (isset($_GET['api'])) {
                                     <button @click="sqlQuery = 'DELETE FROM `' + (activeTable || 'table') + '` WHERE id = 1;'" class="text-[11px] bg-slate-100 dark:bg-slate-800/80 hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700/80 font-mono transition">DELETE</button>
                                     <button @click="sqlQuery = 'CREATE INDEX idx_' + (activeTable || 'table') + '_col ON `' + (activeTable || 'table') + '` (col_name);'" class="text-[11px] bg-slate-100 dark:bg-slate-800/80 hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700/80 font-mono transition">CREATE INDEX</button>
                                     <button @click="sqlQuery = 'EXPLAIN QUERY PLAN SELECT * FROM `' + (activeTable || 'table') + '`;'" class="text-[11px] bg-slate-100 dark:bg-slate-800/80 hover:bg-teal-500/10 hover:text-teal-600 dark:hover:text-teal-400 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700/80 font-mono transition">EXPLAIN</button>
+                                    
+                                    <button @click="formatSqlQuery()" class="text-[11px] bg-gradient-to-r from-sky-500/10 to-indigo-500/10 hover:from-sky-500/20 hover:to-indigo-500/20 text-sky-600 dark:text-sky-300 border border-sky-500/30 px-3 py-1 rounded-lg font-bold transition flex items-center gap-1.5 ml-auto active:scale-95 shadow-xs" title="Clean, indent, and format SQL query (Ctrl+Shift+F)">
+                                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-sky-500"></i>
+                                        <span>Format SQL</span>
+                                    </button>
                                 </div>
 
                                 <div class="relative">
@@ -6067,6 +6072,60 @@ if (isset($_GET['api'])) {
                     this.queryHistory = [];
                     localStorage.removeItem('litesql_query_history');
                     this.showToast('Query history cleared', 'success');
+                },
+
+                formatSqlQuery() {
+                    if (!this.sqlQuery || !this.sqlQuery.trim()) return;
+                    let sql = this.sqlQuery.trim();
+
+                    const majorKeywords = [
+                        'SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'HAVING', 
+                        'LIMIT', 'OFFSET', 'INNER JOIN', 'LEFT JOIN', 'RIGHT JOIN', 
+                        'CROSS JOIN', 'JOIN', 'UNION ALL', 'UNION', 'INSERT INTO', 
+                        'VALUES', 'UPDATE', 'SET', 'DELETE FROM', 'CREATE TABLE', 
+                        'CREATE INDEX', 'CREATE VIEW', 'ALTER TABLE', 'DROP TABLE'
+                    ];
+
+                    majorKeywords.forEach(kw => {
+                        const regex = new RegExp('\\b' + kw.replace(/\s+/g, '\\s+') + '\\b', 'gi');
+                        sql = sql.replace(regex, '\n' + kw);
+                    });
+
+                    ['AND', 'OR', 'ON'].forEach(kw => {
+                        const regex = new RegExp('\\b' + kw + '\\b', 'gi');
+                        sql = sql.replace(regex, '\n  ' + kw);
+                    });
+
+                    const rawLines = sql.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                    const formattedLines = [];
+
+                    rawLines.forEach(line => {
+                        if (/^SELECT\b/i.test(line)) {
+                            const selectRest = line.substring(6).trim();
+                            if (selectRest.length > 0) {
+                                const cols = selectRest.split(',').map(c => c.trim()).filter(c => c.length > 0);
+                                if (cols.length > 1) {
+                                    formattedLines.push('SELECT');
+                                    cols.forEach((c, idx) => {
+                                        formattedLines.push('  ' + c + (idx < cols.length - 1 ? ',' : ''));
+                                    });
+                                    return;
+                                }
+                            }
+                            formattedLines.push('SELECT ' + selectRest);
+                        } else if (/^(AND|OR|ON)\b/i.test(line)) {
+                            formattedLines.push('  ' + line.toUpperCase().split(' ')[0] + line.substring(line.indexOf(' ')));
+                        } else if (/^(FROM|WHERE|GROUP BY|ORDER BY|HAVING|LIMIT|OFFSET|JOIN|LEFT JOIN|INNER JOIN|RIGHT JOIN|INSERT INTO|VALUES|UPDATE|SET|DELETE FROM|CREATE|ALTER|DROP)\b/i.test(line)) {
+                            const firstWord = line.split(' ')[0].toUpperCase();
+                            const rest = line.substring(firstWord.length);
+                            formattedLines.push(firstWord + rest);
+                        } else {
+                            formattedLines.push('  ' + line);
+                        }
+                    });
+
+                    this.sqlQuery = formattedLines.join('\n');
+                    this.showToast('✨ SQL Query Cleaned & Formatted!', 'success');
                 },
 
                 openRenameTableModal() {
