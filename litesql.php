@@ -1740,6 +1740,58 @@ if (isset($_GET['api'])) {
         exit;
     }
 
+    if ($api === 'manifest') {
+        header('Content-Type: application/manifest+json');
+        echo json_encode([
+            'name' => 'LiteSQL Studio',
+            'short_name' => 'LiteSQL',
+            'description' => 'Next-Generation Single-File SQLite Web Administration Studio',
+            'start_url' => './litesql.php',
+            'display' => 'standalone',
+            'background_color' => '#0f172a',
+            'theme_color' => '#0f172a',
+            'orientation' => 'any',
+            'icons' => [
+                [
+                    'src' => '?api=pwa_icon&size=192',
+                    'sizes' => '192x192',
+                    'type' => 'image/svg+xml',
+                    'purpose' => 'any maskable'
+                ],
+                [
+                    'src' => '?api=pwa_icon&size=512',
+                    'sizes' => '512x512',
+                    'type' => 'image/svg+xml',
+                    'purpose' => 'any maskable'
+                ]
+            ]
+        ]);
+        exit;
+    }
+
+    if ($api === 'pwa_icon') {
+        header('Content-Type: image/svg+xml');
+        echo '<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="28" fill="#0f172a"/><path d="M25 30c0-6 11-10 25-10s25 4 25 10-11 10-25 10-25-4-25-10z" fill="#0284c7"/><path d="M25 30v18c0 6 11 10 25 10s25-4 25-10V30" stroke="#38bdf8" stroke-width="6"/><path d="M25 48v18c0 6 11 10 25 10s25-4 25-10V48" stroke="#38bdf8" stroke-width="6"/><path d="M58 18L38 52h14l-6 28 22-32H54l6-28z" fill="#fbbf24"/></svg>';
+        exit;
+    }
+
+    if ($api === 'sw') {
+        header('Content-Type: application/javascript');
+        echo "const CACHE_NAME = 'litesql-pwa-v1';
+self.addEventListener('install', (e) => { self.skipWaiting(); });
+self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
+self.addEventListener('fetch', (e) => {
+    if (e.request.method === 'GET' && (e.request.url.includes('cdn.jsdelivr.net') || e.request.url.includes('unpkg.com'))) {
+        e.respondWith(caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+            return res;
+        })));
+    }
+});";
+        exit;
+    }
+
     if (!Auth::check()) {
         header('Content-Type: application/json');
         http_response_code(401);
@@ -2284,55 +2336,6 @@ if (isset($_GET['api'])) {
             $success = $engine->bulkUpdateColumns($table, $columns);
             echo json_encode(['success' => $success]);
             break;
-
-        case 'manifest':
-            header('Content-Type: application/manifest+json');
-            echo json_encode([
-                'name' => 'LiteSQL Studio',
-                'short_name' => 'LiteSQL',
-                'description' => 'Next-Generation Single-File SQLite Web Administration Studio',
-                'start_url' => './litesql.php',
-                'display' => 'standalone',
-                'background_color' => '#0f172a',
-                'theme_color' => '#0f172a',
-                'orientation' => 'any',
-                'icons' => [
-                    [
-                        'src' => '?api=pwa_icon&size=192',
-                        'sizes' => '192x192',
-                        'type' => 'image/svg+xml',
-                        'purpose' => 'any maskable'
-                    ],
-                    [
-                        'src' => '?api=pwa_icon&size=512',
-                        'sizes' => '512x512',
-                        'type' => 'image/svg+xml',
-                        'purpose' => 'any maskable'
-                    ]
-                ]
-            ]);
-            exit;
-
-        case 'pwa_icon':
-            header('Content-Type: image/svg+xml');
-            echo '<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="28" fill="#0f172a"/><path d="M25 30c0-6 11-10 25-10s25 4 25 10-11 10-25 10-25-4-25-10z" fill="#0284c7"/><path d="M25 30v18c0 6 11 10 25 10s25-4 25-10V30" stroke="#38bdf8" stroke-width="6"/><path d="M25 48v18c0 6 11 10 25 10s25-4 25-10V48" stroke="#38bdf8" stroke-width="6"/><path d="M58 18L38 52h14l-6 28 22-32H54l6-28z" fill="#fbbf24"/></svg>';
-            exit;
-
-        case 'sw':
-            header('Content-Type: application/javascript');
-            echo "const CACHE_NAME = 'litesql-pwa-v1';
-self.addEventListener('install', (e) => { self.skipWaiting(); });
-self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
-self.addEventListener('fetch', (e) => {
-    if (e.request.method === 'GET' && (e.request.url.includes('cdn.jsdelivr.net') || e.request.url.includes('unpkg.com'))) {
-        e.respondWith(caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-            return res;
-        })));
-    }
-});";
-            exit;
 
         case 'truncate_table':
             header('Content-Type: application/json');
