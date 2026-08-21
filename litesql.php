@@ -2973,6 +2973,10 @@ self.addEventListener('fetch', (e) => {
                                                 <i data-lucide="database" class="w-3.5 h-3.5 text-sky-500"></i>
                                                 <span>Export SQL Dump</span>
                                             </a>
+                                            <button @click="exportGridDataPdf(); open = false" class="w-full text-left flex items-center gap-2 p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 transition font-medium border-t border-slate-100 dark:border-slate-800">
+                                                <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-500"></i>
+                                                <span>Export PDF Report</span>
+                                            </button>
                                             <button @click="showEncryptedExportModal = true; open = false" class="w-full text-left flex items-center gap-2 p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400 transition font-medium border-t border-slate-100 dark:border-slate-800">
                                                 <i data-lucide="lock" class="w-3.5 h-3.5 text-amber-500"></i>
                                                 <span>Export Encrypted DB (.zip)</span>
@@ -3717,6 +3721,10 @@ self.addEventListener('fetch', (e) => {
                                                     <button @click="exportQueryResultsHtml(); open = false" class="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-sky-500/10 hover:text-sky-600 dark:hover:text-sky-400 flex items-center gap-2 transition font-medium border-t border-slate-100 dark:border-slate-800">
                                                         <i data-lucide="file-code" class="w-3.5 h-3.5 text-sky-500"></i>
                                                         <span>Export Styled HTML Report</span>
+                                                    </button>
+                                                    <button @click="exportQueryResultsPdf(); open = false" class="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 flex items-center gap-2 transition font-medium border-t border-slate-100 dark:border-slate-800">
+                                                        <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-500"></i>
+                                                        <span>Export PDF Report</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -6050,6 +6058,176 @@ self.addEventListener('fetch', (e) => {
                         };
                         img.src = blobURL;
                     }
+                },
+
+                escapeHtml(str) {
+                    if (str === null || str === undefined) return '';
+                    return String(str)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#039;');
+                },
+
+                exportQueryResultsPdf() {
+                    if (!this.queryResult || !this.queryResult.rows || this.queryResult.rows.length === 0) {
+                        this.showToast('No query data to export', 'error');
+                        return;
+                    }
+
+                    const rows = this.queryResult.rows;
+                    const cols = this.queryResult.columns || Object.keys(rows[0] || {});
+                    const dateStr = new Date().toLocaleString();
+                    const dbName = this.activeDbName || 'Database';
+
+                    const printWin = window.open('', '_blank');
+                    if (!printWin) {
+                        this.showToast('Pop-up blocked. Please allow pop-ups for PDF export.', 'error');
+                        return;
+                    }
+
+                    let html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>LiteSQL Studio Report - ${this.escapeHtml(dbName)}</title>
+    <style>
+        @page { size: A4 landscape; margin: 12mm; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 11px; color: #1e293b; margin: 0; padding: 20px; background: #fff; }
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 16px; }
+        .title { font-size: 18px; font-weight: 800; color: #0284c7; margin: 0; }
+        .subtitle { font-size: 11px; color: #64748b; margin-top: 4px; font-family: monospace; }
+        .meta { text-align: right; font-size: 10px; color: #64748b; font-family: monospace; }
+        .sql-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-family: monospace; font-size: 10px; color: #334155; margin-bottom: 16px; word-break: break-all; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th { background: #0f172a; color: #ffffff; text-align: left; padding: 7px 10px; font-size: 10px; text-transform: uppercase; font-family: monospace; border: 1px solid #0f172a; }
+        td { border: 1px solid #cbd5e1; padding: 6px 10px; vertical-align: top; word-break: break-word; }
+        tr:nth-child(even) { background-color: #f8fafc; }
+        .footer { margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1 class="title">⚡ LiteSQL Studio — Query Data Report</h1>
+            <div class="subtitle">Database: <strong>${this.escapeHtml(dbName)}</strong> &bull; Total Fetched Rows: <strong>${rows.length}</strong></div>
+        </div>
+        <div class="meta">
+            <div>Generated: ${dateStr}</div>
+            <div>Author: Dhiraj Sharma (litesql-studio)</div>
+        </div>
+    </div>
+
+    <div class="sql-box">
+        <strong>SQL Query:</strong> ${this.escapeHtml(this.sqlQuery || 'N/A')}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                ${cols.map(c => `<th>${this.escapeHtml(c)}</th>`).join('')}
+            </tr>
+        </thead>
+        <tbody>
+            ${rows.map(r => `
+                <tr>
+                    ${cols.map(c => `<td>${this.escapeHtml(r[c] !== null && r[c] !== undefined ? String(r[c]) : 'NULL')}</td>`).join('')}
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <div>LiteSQL Studio v${this.version} &bull; Open Source SQLite Administrator</div>
+        <div>Page 1 of 1</div>
+    </div>
+</body>
+</html>`;
+
+                    printWin.document.write(html);
+                    printWin.document.close();
+                    setTimeout(() => {
+                        printWin.print();
+                    }, 300);
+                    this.showToast('Printable PDF Report opened!', 'success');
+                },
+
+                exportGridDataPdf() {
+                    if (!this.tableRows || this.tableRows.length === 0) {
+                        this.showToast('No table rows to export', 'error');
+                        return;
+                    }
+
+                    const rows = this.tableRows;
+                    const cols = this.tableColumns.length > 0 ? this.tableColumns.map(c => c.name) : Object.keys(rows[0] || {}).filter(k => k !== '_selected');
+                    const dateStr = new Date().toLocaleString();
+                    const dbName = this.activeDbName || 'Database';
+                    const tableName = this.activeTable || 'Table';
+
+                    const printWin = window.open('', '_blank');
+                    if (!printWin) {
+                        this.showToast('Pop-up blocked. Please allow pop-ups for PDF export.', 'error');
+                        return;
+                    }
+
+                    let html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>LiteSQL Studio Report - ${this.escapeHtml(tableName)}</title>
+    <style>
+        @page { size: A4 landscape; margin: 12mm; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 11px; color: #1e293b; margin: 0; padding: 20px; background: #fff; }
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 16px; }
+        .title { font-size: 18px; font-weight: 800; color: #0284c7; margin: 0; }
+        .subtitle { font-size: 11px; color: #64748b; margin-top: 4px; font-family: monospace; }
+        .meta { text-align: right; font-size: 10px; color: #64748b; font-family: monospace; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th { background: #0f172a; color: #ffffff; text-align: left; padding: 7px 10px; font-size: 10px; text-transform: uppercase; font-family: monospace; border: 1px solid #0f172a; }
+        td { border: 1px solid #cbd5e1; padding: 6px 10px; vertical-align: top; word-break: break-word; }
+        tr:nth-child(even) { background-color: #f8fafc; }
+        .footer { margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1 class="title">⚡ LiteSQL Studio — Table Data Report</h1>
+            <div class="subtitle">Database: <strong>${this.escapeHtml(dbName)}</strong> &bull; Table: <strong>${this.escapeHtml(tableName)}</strong> &bull; Filtered Records: <strong>${this.totalRows}</strong></div>
+        </div>
+        <div class="meta">
+            <div>Generated: ${dateStr}</div>
+            <div>Author: Dhiraj Sharma (litesql-studio)</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                ${cols.map(c => `<th>${this.escapeHtml(c)}</th>`).join('')}
+            </tr>
+        </thead>
+        <tbody>
+            ${rows.map(r => `
+                <tr>
+                    ${cols.map(c => `<td>${this.escapeHtml(r[c] !== null && r[c] !== undefined ? String(r[c]) : 'NULL')}</td>`).join('')}
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <div>LiteSQL Studio v${this.version} &bull; Open Source SQLite Administrator</div>
+        <div>Page 1 of 1</div>
+    </div>
+</body>
+</html>`;
+
+                    printWin.document.write(html);
+                    printWin.document.close();
+                    setTimeout(() => {
+                        printWin.print();
+                    }, 300);
+                    this.showToast('Printable PDF Report opened!', 'success');
                 },
 
                 showGlobalSearchModal: false,
