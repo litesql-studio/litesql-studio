@@ -5319,6 +5319,48 @@ if (isset($_GET['api'])) {
                     return Math.max(1, Math.ceil(this.queryResult.rows.length / limit));
                 },
 
+                get queryColumnStats() {
+                    if (!this.queryResult || !this.queryResult.rows || this.queryResult.rows.length === 0 || !this.queryResult.columns) {
+                        return [];
+                    }
+
+                    const stats = [];
+                    const rows = this.queryResult.rows;
+
+                    this.queryResult.columns.forEach(col => {
+                        let sum = 0;
+                        let min = null;
+                        let max = null;
+                        let numericCount = 0;
+
+                        for (let i = 0; i < rows.length; i++) {
+                            const val = rows[i][col];
+                            if (val === null || val === undefined || val === '') continue;
+                            const num = Number(val);
+                            if (typeof val !== 'boolean' && !isNaN(num) && isFinite(num)) {
+                                numericCount++;
+                                sum += num;
+                                if (min === null || num < min) min = num;
+                                if (max === null || num > max) max = num;
+                            }
+                        }
+
+                        if (numericCount > 0 && (numericCount / rows.length) >= 0.2) {
+                            const avg = sum / numericCount;
+                            stats.push({
+                                column: col,
+                                count: numericCount,
+                                sum: Math.round(sum * 100) / 100,
+                                avg: Math.round(avg * 100) / 100,
+                                min: min,
+                                max: max
+                            });
+                        }
+                    });
+
+                    return stats;
+                },
+
                 showCreateViewModal: false,
                 newViewName: '',
                 newViewSql: '',
