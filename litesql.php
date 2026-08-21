@@ -3405,11 +3405,23 @@ if (isset($_GET['api'])) {
                                     <!-- GRID DATA VIEW -->
                                     <template x-if="queryResult.type === 'select' && queryViewMode === 'grid'">
                                         <table class="w-full text-left border-collapse text-xs">
-                                            <thead class="bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold">
+                                            <thead class="sticky top-0 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold shadow-xs z-10">
                                                 <tr>
                                                     <th class="p-2.5 w-12 text-center border-r border-slate-200 dark:border-slate-800">#</th>
                                                     <template x-for="col in queryResult.columns" :key="col">
-                                                        <th class="p-2.5 border-r border-slate-200 dark:border-slate-800" x-text="col"></th>
+                                                        <th @click="sortQueryResult(col)" class="p-2.5 border-r border-slate-200 dark:border-slate-800 hover:bg-slate-200/60 dark:hover:bg-slate-800/80 cursor-pointer select-none transition" :class="querySortColumn === col ? 'bg-sky-500/10 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold' : ''" title="Click to sort by this column">
+                                                            <div class="flex items-center justify-between gap-2">
+                                                                <span x-text="col" class="font-semibold truncate"></span>
+                                                                <div class="flex items-center shrink-0">
+                                                                    <template x-if="querySortColumn === col">
+                                                                        <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-600 text-white shadow-xs" x-text="querySortDir === 'ASC' ? '▲ ASC' : '▼ DESC'"></span>
+                                                                    </template>
+                                                                    <template x-if="querySortColumn !== col">
+                                                                        <span class="text-slate-400 dark:text-slate-600 text-[10px]">↕</span>
+                                                                    </template>
+                                                                </div>
+                                                            </div>
+                                                        </th>
                                                     </template>
                                                     <th class="p-2.5 w-16 text-center">Inspect</th>
                                                 </tr>
@@ -5209,12 +5221,52 @@ if (isset($_GET['api'])) {
 
                 queryPage: 1,
                 queryPageLimit: '50',
+                querySortColumn: '',
+                querySortDir: 'ASC',
+
+                sortQueryResult(colName) {
+                    if (this.querySortColumn === colName) {
+                        if (this.querySortDir === 'ASC') {
+                            this.querySortDir = 'DESC';
+                        } else {
+                            this.querySortColumn = '';
+                            this.querySortDir = 'ASC';
+                        }
+                    } else {
+                        this.querySortColumn = colName;
+                        this.querySortDir = 'ASC';
+                    }
+                    this.queryPage = 1;
+                },
+
+                get sortedQueryResultRows() {
+                    if (!this.queryResult || !this.queryResult.rows) return [];
+                    let rows = [...this.queryResult.rows];
+                    if (this.querySortColumn) {
+                        const col = this.querySortColumn;
+                        const dir = this.querySortDir === 'ASC' ? 1 : -1;
+                        rows.sort((a, b) => {
+                            let valA = a[col];
+                            let valB = b[col];
+                            if (valA === null || valA === undefined) return 1;
+                            if (valB === null || valB === undefined) return -1;
+                            
+                            const numA = Number(valA);
+                            const numB = Number(valB);
+                            if (!isNaN(numA) && !isNaN(numB) && String(valA).trim() !== '' && String(valB).trim() !== '') {
+                                return (numA - numB) * dir;
+                            }
+                            return String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: 'base' }) * dir;
+                        });
+                    }
+                    return rows;
+                },
 
                 get pagedQueryRows() {
                     if (!this.queryResult || !this.queryResult.rows) return [];
                     const limit = Math.min(250, parseInt(this.queryPageLimit) || 50);
                     const start = (this.queryPage - 1) * limit;
-                    return this.queryResult.rows.slice(start, start + limit);
+                    return this.sortedQueryResultRows.slice(start, start + limit);
                 },
 
                 get totalQueryPages() {
@@ -5924,6 +5976,8 @@ if (isset($_GET['api'])) {
                     if (!this.sqlQuery.trim()) return;
                     this.queryPlanData = {};
                     this.queryPage = 1;
+                    this.querySortColumn = '';
+                    this.querySortDir = 'ASC';
 
                     const res = await fetch(`?api=query&db_path=${encodeURIComponent(this.activeDb)}`, {
                         method: 'POST',
