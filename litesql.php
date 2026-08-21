@@ -5612,10 +5612,12 @@ self.addEventListener('fetch', (e) => {
                     </template>
 
                     <template x-if="!globalSearchLoading && globalSearchResults.query && globalSearchResults.total_matches === 0">
-                        <div class="py-16 text-center space-y-2">
-                            <i data-lucide="search-x" class="w-10 h-10 text-slate-400 mx-auto"></i>
-                            <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300">No Record Matches Found</h4>
-                            <p class="text-xs text-slate-500">No database records found matching "<span x-text="globalSearchResults.query"></span>" across any tables.</p>
+                        <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-between text-xs text-amber-700 dark:text-amber-300">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="search-x" class="w-4 h-4 text-amber-500 shrink-0"></i>
+                                <span>No database records found matching "<strong x-text="globalSearchResults.query"></strong>" across any tables.</span>
+                            </div>
+                            <span class="text-[10px] text-amber-500 font-mono">0 matches</span>
                         </div>
                     </template>
 
