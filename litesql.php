@@ -3841,10 +3841,10 @@ self.addEventListener('fetch', (e) => {
                                                         </select>
                                                     </div>
 
-                                                    <!-- 3. Export PNG Button -->
-                                                    <button type="button" @click="exportChartPng()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 active:scale-95">
-                                                        <i data-lucide="camera" class="w-3.5 h-3.5"></i>
-                                                        <span>Export PNG</span>
+                                                    <!-- 3. Export PNG Button with Loading Spinner Animation -->
+                                                    <button type="button" @click="exportChartPng()" :disabled="isExportingChart" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 active:scale-95 disabled:opacity-50 cursor-pointer">
+                                                        <i :data-lucide="isExportingChart ? 'loader-2' : 'camera'" class="w-3.5 h-3.5" :class="isExportingChart ? 'animate-spin' : ''"></i>
+                                                        <span x-text="isExportingChart ? 'Exporting PNG...' : 'Export PNG'"></span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -5818,6 +5818,7 @@ self.addEventListener('fetch', (e) => {
                 chartType: 'bar',
                 chartLabelCol: '',
                 chartValCol: '',
+                isExportingChart: false,
                 autoSafetyLimitVal: '500',
                 isDryRun: false,
 
@@ -5975,7 +5976,15 @@ self.addEventListener('fetch', (e) => {
                         return;
                     }
 
+                    this.isExportingChart = true;
                     this.showToast('Generating high-res Chart PNG...', 'success');
+
+                    const resetState = () => {
+                        setTimeout(() => {
+                            this.isExportingChart = false;
+                            setTimeout(() => lucide.createIcons(), 50);
+                        }, 600);
+                    };
 
                     if (typeof html2canvas === 'function') {
                         html2canvas(chartNode, {
@@ -5992,8 +6001,10 @@ self.addEventListener('fetch', (e) => {
                             downloadLink.click();
                             document.body.removeChild(downloadLink);
                             this.showToast('Chart PNG exported successfully!', 'success');
+                            resetState();
                         }).catch(err => {
                             this.showToast('Failed to export chart PNG: ' + err.message, 'error');
+                            resetState();
                         });
                     } else {
                         const width = chartNode.offsetWidth || 800;
@@ -6030,6 +6041,10 @@ self.addEventListener('fetch', (e) => {
                             a.click();
                             document.body.removeChild(a);
                             this.showToast('Chart PNG exported successfully!', 'success');
+                            resetState();
+                        };
+                        img.onerror = () => {
+                            resetState();
                         };
                         img.src = blobURL;
                     }
