@@ -6816,8 +6816,18 @@ self.addEventListener('fetch', (e) => {
                     }
 
                     if (isSuccess && this.queryResult.columns && this.queryResult.columns.length > 0) {
-                        this.chartLabelCol = this.queryResult.columns[0];
-                        this.chartValCol = this.queryResult.columns[1] || this.queryResult.columns[0];
+                        const cols = this.queryResult.columns;
+                        
+                        const labelCol = cols.find(c => {
+                            const val = (this.queryResult.rows && this.queryResult.rows[0]) ? this.queryResult.rows[0][c] : null;
+                            return typeof val === 'string' && isNaN(Number(val));
+                        }) || cols[0];
+
+                        const stats = this.queryColumnStats;
+                        const valCol = (stats && stats.length > 0) ? stats[0].column : (cols[1] || cols[0]);
+
+                        this.chartLabelCol = labelCol;
+                        this.chartValCol = valCol;
                     }
 
                     this.queryHistory.unshift({
