@@ -64,6 +64,10 @@ Outdated tools like **phpLiteAdmin** and **Adminer** were built over a decade ag
 
 ### ⚡ 3. SQL Console & Performance Profiler
 - **Live SQL Autocomplete & IntelliSense**: Context-aware dropdown autocomplete for SQL keywords, table names, and column identifiers.
+- **🧪 SQL Dry Run Lock (Transaction Sandbox Mode)**: Test dangerous `UPDATE`, `DELETE`, `DROP`, or `INSERT` queries inside an isolated transaction that automatically `ROLLBACK`s — inspecting affected rows with 0% write effect on database disk.
+- **📑 SQL Output Grid Pagination**: Seamless `◀ Prev` / `Next ▶` page navigation, customizable page sizes (`25`, `50`, `100`, `250`), and live record range indicators (`Showing 1 to 50 of 1521 fetched rows`).
+- **📶 Interactive Result Column Header Sorting**: Click any result grid column header to cycle through `ASC`, `DESC`, and reset states with glowing visual sort badges.
+- **🛡️ Configurable Safety Limit Selector**: Select safety query caps (`500`, `1,000`, `2,500`, `5,000` rows) protecting server memory while analyzing large datasets.
 - **EXPLAIN QUERY PLAN Inspector**: Automated B-tree execution profiling displaying full table scan warnings (🔴 `FULL SCAN`) and index optimization suggestions.
 - **⭐ Saved Queries & History Drawer**: Bookmark frequently used SQL statements with category tags (`Reports`, `Users`, `Cleanup`) and search through executed query logs.
 - **⚡ Dual SQL Performance Benchmarker**: Run side-by-side speed tests comparing Query A vs Query B across configurable iteration counts.
