@@ -2540,10 +2540,10 @@ if (isset($_GET['api'])) {
 
                 <!-- GLOBAL DATABASE SEARCH INPUT TRIGGER -->
                 <template x-if="activeDb">
-                    <div @click="showGlobalSearchModal = true" class="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer flex items-center gap-2 transition shadow-inner" title="Search keyword across ALL tables in database">
+                    <button type="button" @click="openGlobalSearchModal()" class="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer flex items-center gap-2 transition shadow-inner active:scale-95" title="Search keyword across ALL tables in database">
                         <i data-lucide="search" class="w-3.5 h-3.5 text-sky-500 shrink-0"></i>
                         <span class="hidden md:inline text-slate-500 dark:text-slate-400 font-medium">Search DB...</span>
-                    </div>
+                    </button>
                 </template>
             </div>
 
@@ -5289,7 +5289,7 @@ if (isset($_GET['api'])) {
                 <!-- Modal Header / Search Bar -->
                 <div class="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
                     <i data-lucide="search" class="w-5 h-5 text-sky-500 shrink-0"></i>
-                    <input type="text" x-model="globalSearchQuery" @keyup.enter="performGlobalSearch()" placeholder="Search keyword across ALL database tables (e.g. 'Ghazipur', 'Sharma')..." class="w-full bg-transparent text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none" autofocus>
+                    <input type="text" x-ref="globalSearchInput" x-model="globalSearchQuery" @keyup.enter="performGlobalSearch()" placeholder="Search keyword across ALL database tables (e.g. 'Ghazipur', 'Sharma')..." class="w-full bg-transparent text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none" autofocus>
                     
                     <button @click="performGlobalSearch()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shrink-0 flex items-center gap-1.5 shadow-md shadow-sky-600/20 active:scale-95">
                         <i :data-lucide="globalSearchLoading ? 'loader-2' : 'search'" class="w-3.5 h-3.5" :class="globalSearchLoading ? 'animate-spin' : ''"></i>
@@ -5690,6 +5690,7 @@ if (isset($_GET['api'])) {
                     const items = [];
 
                     const navs = [
+                        { title: 'Global Database Search (All Tables)', icon: 'search', action: () => { this.openGlobalSearchModal(); } },
                         { title: 'Go to Data Grid', icon: 'grid', action: () => { this.activeTab = 'data'; } },
                         { title: 'Go to Structure', icon: 'layers', action: () => { this.activeTab = 'structure'; this.loadSchema(); } },
                         { title: 'Go to SQL Console', icon: 'terminal', action: () => { this.activeTab = 'query'; } },
@@ -6252,6 +6253,18 @@ if (isset($_GET['api'])) {
                     } else {
                         this.showToast(data.error || 'Failed to add column', 'error');
                     }
+                },
+
+                openGlobalSearchModal() {
+                    this.showGlobalSearchModal = true;
+                    this.globalSearchQuery = '';
+                    this.globalSearchResults = { query: '', total_matches: 0, results: [] };
+                    setTimeout(() => {
+                        lucide.createIcons();
+                        if (this.$refs.globalSearchInput) {
+                            this.$refs.globalSearchInput.focus();
+                        }
+                    }, 50);
                 },
 
                 async performGlobalSearch() {
