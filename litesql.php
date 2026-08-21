@@ -2523,7 +2523,7 @@ if (isset($_GET['api'])) {
                 </div>
 
                 <!-- UNIFIED SPOTLIGHT & GLOBAL DATABASE SEARCH TRIGGER -->
-                <button @click="openGlobalSearchModal()" class="bg-slate-100 dark:bg-slate-950/80 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-800 transition flex items-center gap-2 shadow-inner font-medium ml-1 active:scale-95" title="Search keyword across ALL database tables (Ctrl+K)">
+                <button @click.stop="openGlobalSearchModal()" class="bg-slate-100 dark:bg-slate-950/80 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-800 transition flex items-center gap-2 shadow-inner font-medium ml-1 active:scale-95" title="Search keyword across ALL database tables (Ctrl+K)">
                     <i data-lucide="search" class="w-3.5 h-3.5 text-sky-500"></i>
                     <span class="hidden md:inline text-slate-700 dark:text-slate-200 font-semibold">Search Database...</span>
                     <kbd class="text-[10px] font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 px-1.5 py-0.5 rounded text-slate-400">Ctrl+K</kbd>
@@ -5276,8 +5276,8 @@ if (isset($_GET['api'])) {
 
     <!-- GLOBAL DATABASE SEARCH MODAL -->
     <template x-if="showGlobalSearchModal">
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md" @keydown.escape.window="showGlobalSearchModal = false">
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" @click.away="showGlobalSearchModal = false">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md" @click.self="showGlobalSearchModal = false" @keydown.escape.window="showGlobalSearchModal = false">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" @click.stop>
                 <!-- Modal Header / Search Bar -->
                 <div class="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
                     <i data-lucide="search" class="w-5 h-5 text-sky-500 shrink-0"></i>
