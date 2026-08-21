@@ -3796,6 +3796,147 @@ self.addEventListener('fetch', (e) => {
                                         </table>
                                     </template>
 
+                                    <!-- CHART & GRAPH VISUALIZER VIEW -->
+                                    <template x-if="queryResult.type === 'select' && queryViewMode === 'chart'">
+                                        <div class="space-y-4 p-2">
+                                            <!-- CHART CONTROLS TOOLBAR -->
+                                            <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xs">
+                                                <!-- 1. Chart Type Selector -->
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Chart Type:</span>
+                                                    <div class="flex items-center bg-white dark:bg-slate-950 p-1 rounded-xl border border-slate-300 dark:border-slate-800 text-xs">
+                                                        <button type="button" @click="chartType = 'bar'" :class="chartType === 'bar' ? 'bg-sky-600 text-white font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'" class="px-3 py-1 rounded-lg transition flex items-center gap-1.5">
+                                                            <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>
+                                                            <span>Bar</span>
+                                                        </button>
+                                                        <button type="button" @click="chartType = 'line'" :class="chartType === 'line' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'" class="px-3 py-1 rounded-lg transition flex items-center gap-1.5">
+                                                            <i data-lucide="line-chart" class="w-3.5 h-3.5"></i>
+                                                            <span>Line</span>
+                                                        </button>
+                                                        <button type="button" @click="chartType = 'pie'" :class="chartType === 'pie' ? 'bg-purple-600 text-white font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'" class="px-3 py-1 rounded-lg transition flex items-center gap-1.5">
+                                                            <i data-lucide="pie-chart" class="w-3.5 h-3.5"></i>
+                                                            <span>Pie</span>
+                                                        </button>
+                                                        <button type="button" @click="chartType = 'donut'" :class="chartType === 'donut' ? 'bg-amber-600 text-white font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'" class="px-3 py-1 rounded-lg transition flex items-center gap-1.5">
+                                                            <i data-lucide="disc" class="w-3.5 h-3.5"></i>
+                                                            <span>Donut</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 2. Column Mapping Pickers -->
+                                                <div class="flex flex-wrap items-center gap-3">
+                                                    <div class="flex items-center gap-1.5">
+                                                        <span class="text-xs text-slate-500 font-semibold">Label Column (X):</span>
+                                                        <select x-model="chartLabelCol" class="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 font-mono">
+                                                            <template x-for="c in queryResult.columns" :key="c">
+                                                                <option :value="c" x-text="c"></option>
+                                                            </template>
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="flex items-center gap-1.5">
+                                                        <span class="text-xs text-slate-500 font-semibold">Value Column (Y):</span>
+                                                        <select x-model="chartValCol" class="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 font-mono">
+                                                            <template x-for="c in queryResult.columns" :key="c">
+                                                                <option :value="c" x-text="c"></option>
+                                                            </template>
+                                                        </select>
+                                                    </div>
+
+                                                    <!-- 3. Export PNG Button -->
+                                                    <button type="button" @click="exportChartPng()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 active:scale-95">
+                                                        <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                                                        <span>Export PNG</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- VECTOR SVG HIGH-RES CANVAS CHART CONTAINER -->
+                                            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative overflow-hidden shadow-2xl min-h-[380px] flex items-center justify-center">
+                                                <svg id="litesql-chart-svg" viewBox="0 0 800 360" class="w-full h-80 overflow-visible">
+                                                    <!-- BAR CHART RENDER -->
+                                                    <template x-if="chartType === 'bar'">
+                                                        <g>
+                                                            <!-- Grid lines -->
+                                                            <line x1="60" y1="40" x2="760" y2="40" stroke="#1e293b" stroke-dasharray="4 4" />
+                                                            <line x1="60" y1="110" x2="760" y2="110" stroke="#1e293b" stroke-dasharray="4 4" />
+                                                            <line x1="60" y1="180" x2="760" y2="180" stroke="#1e293b" stroke-dasharray="4 4" />
+                                                            <line x1="60" y1="250" x2="760" y2="250" stroke="#1e293b" stroke-dasharray="4 4" />
+                                                            <line x1="60" y1="290" x2="760" y2="290" stroke="#334155" stroke-width="2" />
+
+                                                            <template x-for="(lbl, idx) in queryChartData.labels" :key="idx">
+                                                                <g>
+                                                                    <!-- Bar Rect -->
+                                                                    <rect :x="70 + idx * ((680) / Math.max(1, queryChartData.labels.length))"
+                                                                          :y="290 - (queryChartData.values[idx] / queryChartData.maxVal) * 240"
+                                                                          :width="Math.max(8, (680 / Math.max(1, queryChartData.labels.length)) * 0.65)"
+                                                                          :height="(queryChartData.values[idx] / queryChartData.maxVal) * 240"
+                                                                          rx="6"
+                                                                          fill="url(#barGradient)"
+                                                                          class="transition-all duration-300 hover:opacity-80 cursor-pointer">
+                                                                        <title x-text="lbl + ': ' + queryChartData.values[idx]"></title>
+                                                                    </rect>
+
+                                                                    <!-- Label below bar -->
+                                                                    <text :x="70 + idx * ((680) / Math.max(1, queryChartData.labels.length)) + (680 / Math.max(1, queryChartData.labels.length)) * 0.3"
+                                                                          y="312"
+                                                                          fill="#94a3b8"
+                                                                          font-size="10"
+                                                                          font-family="monospace"
+                                                                          text-anchor="middle"
+                                                                          x-text="lbl.length > 8 ? lbl.substring(0,6) + '..' : lbl"></text>
+                                                                </g>
+                                                            </template>
+
+                                                            <defs>
+                                                                <linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                                    <stop offset="0%" stop-color="#38bdf8" />
+                                                                    <stop offset="100%" stop-color="#0284c7" />
+                                                                </linearGradient>
+                                                            </defs>
+                                                        </g>
+                                                    </template>
+
+                                                    <!-- LINE CHART RENDER -->
+                                                    <template x-if="chartType === 'line'">
+                                                        <g>
+                                                            <line x1="60" y1="290" x2="760" y2="290" stroke="#334155" stroke-width="2" />
+                                                            <path :d="queryChartData.labels.map((lbl, i) => (i === 0 ? 'M' : 'L') + (70 + i * (680 / Math.max(1, queryChartData.labels.length))) + ' ' + (290 - (queryChartData.values[i] / queryChartData.maxVal) * 240)).join(' ')"
+                                                                  fill="none" stroke="#10b981" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+
+                                                            <template x-for="(lbl, idx) in queryChartData.labels" :key="idx">
+                                                                <circle :cx="70 + idx * (680 / Math.max(1, queryChartData.labels.length))"
+                                                                        :cy="290 - (queryChartData.values[idx] / queryChartData.maxVal) * 240"
+                                                                        r="5" fill="#10b981" stroke="#0f172a" stroke-width="2">
+                                                                    <title x-text="lbl + ': ' + queryChartData.values[idx]"></title>
+                                                                </circle>
+                                                            </template>
+                                                        </g>
+                                                    </template>
+
+                                                    <!-- PIE & DONUT CHART RENDER -->
+                                                    <template x-if="chartType === 'pie' || chartType === 'donut'">
+                                                        <g transform="translate(400, 170)">
+                                                            <circle r="120" fill="#1e293b" />
+                                                            <template x-for="(lbl, idx) in queryChartData.labels.slice(0, 8)" :key="idx">
+                                                                <path :d="'M 0 0 L ' + (120 * Math.cos((idx * (2 * Math.PI / Math.min(8, queryChartData.labels.length))))) + ' ' + (120 * Math.sin((idx * (2 * Math.PI / Math.min(8, queryChartData.labels.length))))) + ' A 120 120 0 0 1 ' + (120 * Math.cos(((idx + 1) * (2 * Math.PI / Math.min(8, queryChartData.labels.length))))) + ' ' + (120 * Math.sin(((idx + 1) * (2 * Math.PI / Math.min(8, queryChartData.labels.length))))) + ' Z'"
+                                                                      :fill="['#0284c7', '#10b981', '#a855f7', '#f59e0b', '#f43f5e', '#06b6d4', '#ec4899', '#84cc16'][idx % 8]" stroke="#0f172a" stroke-width="2">
+                                                                    <title x-text="lbl + ': ' + queryChartData.values[idx]"></title>
+                                                                </path>
+                                                            </template>
+
+                                                            <!-- Donut Hole Cutout -->
+                                                            <template x-if="chartType === 'donut'">
+                                                                <circle r="60" fill="#0f172a" />
+                                                            </template>
+                                                        </g>
+                                                    </template>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </template>
+
                                     <!-- SQL Results Bottom Pagination Summary Bar -->
                                     <template x-if="queryResult.type === 'select' && queryResult.rows && queryResult.rows.length > 0">
                                         <div class="p-3 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium gap-3 rounded-b-2xl">
@@ -5871,6 +6012,96 @@ self.addEventListener('fetch', (e) => {
                     });
 
                     return stats;
+                },
+
+                get queryChartData() {
+                    if (!this.queryResult || !this.queryResult.rows || this.queryResult.rows.length === 0 || !this.queryResult.columns) {
+                        return { labels: [], values: [], maxVal: 1, totalSum: 0 };
+                    }
+
+                    const rows = this.queryResult.rows;
+                    const cols = this.queryResult.columns;
+
+                    let labelCol = this.chartLabelCol;
+                    let valCol = this.chartValCol;
+
+                    if (!labelCol || !cols.includes(labelCol)) {
+                        labelCol = cols[0];
+                        this.chartLabelCol = labelCol;
+                    }
+
+                    if (!valCol || !cols.includes(valCol)) {
+                        const numericStats = this.queryColumnStats;
+                        if (numericStats && numericStats.length > 0) {
+                            valCol = numericStats[0].column;
+                        } else {
+                            valCol = cols[1] || cols[0];
+                        }
+                        this.chartValCol = valCol;
+                    }
+
+                    const labels = [];
+                    const values = [];
+                    let maxVal = 0;
+                    let totalSum = 0;
+
+                    const sliceRows = rows.slice(0, 50);
+
+                    sliceRows.forEach(r => {
+                        const lbl = String(r[labelCol] !== null && r[labelCol] !== undefined ? r[labelCol] : 'N/A');
+                        const rawVal = r[valCol];
+                        const val = Number(rawVal);
+                        const numVal = (!isNaN(val) && isFinite(val)) ? val : 0;
+
+                        labels.push(lbl);
+                        values.push(numVal);
+                        if (numVal > maxVal) maxVal = numVal;
+                        totalSum += numVal;
+                    });
+
+                    return {
+                        labelCol,
+                        valCol,
+                        labels,
+                        values,
+                        maxVal: maxVal > 0 ? maxVal : 1,
+                        totalSum
+                    };
+                },
+
+                exportChartPng() {
+                    const svgEl = document.getElementById('litesql-chart-svg');
+                    if (!svgEl) {
+                        this.showToast('Chart SVG element not found', 'error');
+                        return;
+                    }
+
+                    const serializer = new XMLSerializer();
+                    const svgString = serializer.serializeToString(svgEl);
+                    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                    const URL = window.URL || window.webkitURL || window;
+                    const blobURL = URL.createObjectURL(svgBlob);
+
+                    const image = new Image();
+                    image.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = (svgEl.clientWidth || 800) * 2;
+                        canvas.height = (svgEl.clientHeight || 400) * 2;
+                        const context = canvas.getContext('2d');
+                        context.fillStyle = '#0f172a';
+                        context.fillRect(0, 0, canvas.width, canvas.height);
+                        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                        const png = canvas.toDataURL('image/png');
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = png;
+                        downloadLink.download = `litesql_chart_${this.chartType}_${Date.now()}.png`;
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                        this.showToast('Chart PNG image exported successfully!', 'success');
+                    };
+                    image.src = blobURL;
                 },
 
                 showGlobalSearchModal: false,
