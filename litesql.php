@@ -6830,7 +6830,8 @@ if (isset($_GET['api'])) {
                     const totalWidth = Math.max(900, Math.min(3, this.erData.tables.length) * (cardWidth + cardGap) + 40);
                     const totalHeight = yOffset + 300;
 
-                    const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+                    const xmlHeader = '<' + '?xml version="1.0" encoding="UTF-8"?' + '>';
+                    const svgContent = `${xmlHeader}
 <svg width="${totalWidth}" height="${totalHeight}" xmlns="http://www.w3.org/2000/svg">
   <rect width="100%" height="100%" fill="#0f172a"/>
   <text x="20" y="35" fill="#ffffff" font-size="18" font-weight="bold" font-family="sans-serif">⚡ LiteSQL Studio - ER Schema Diagram (${dbName})</text>
@@ -7041,17 +7042,18 @@ if (isset($_GET['api'])) {
                     const sql = this.sqlQuery.trim() || `SELECT * FROM \`${table}\` LIMIT 50;`;
 
                     let code = '';
+                    const phpTag = '<' + '?php';
                     if (lang === 'php') {
                         if (op === 'select') {
-                            code = `<?php\n// PHP PDO SQLite - Select All Records\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->query("SELECT * FROM \`${table}\`");\n$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);\nprint_r($rows);`;
+                            code = `${phpTag}\n// PHP PDO SQLite - Select All Records\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->query("SELECT * FROM \`${table}\`");\n$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);\nprint_r($rows);`;
                         } else if (op === 'insert') {
-                            code = `<?php\n// PHP PDO SQLite - Insert Record\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->prepare("INSERT INTO \`${table}\` (column1, column2) VALUES (?, ?)");\n$stmt->execute(['value1', 'value2']);\necho "Inserted ID: " . $pdo->lastInsertId();`;
+                            code = `${phpTag}\n// PHP PDO SQLite - Insert Record\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->prepare("INSERT INTO \`${table}\` (column1, column2) VALUES (?, ?)");\n$stmt->execute(['value1', 'value2']);\necho "Inserted ID: " . $pdo->lastInsertId();`;
                         } else if (op === 'update') {
-                            code = `<?php\n// PHP PDO SQLite - Update Record\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->prepare("UPDATE \`${table}\` SET column1 = ? WHERE id = ?");\n$stmt->execute(['new_value', 1]);`;
+                            code = `${phpTag}\n// PHP PDO SQLite - Update Record\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->prepare("UPDATE \`${table}\` SET column1 = ? WHERE id = ?");\n$stmt->execute(['new_value', 1]);`;
                         } else if (op === 'delete') {
-                            code = `<?php\n// PHP PDO SQLite - Delete Record\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->prepare("DELETE FROM \`${table}\` WHERE id = ?");\n$stmt->execute([1]);`;
+                            code = `${phpTag}\n// PHP PDO SQLite - Delete Record\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->prepare("DELETE FROM \`${table}\` WHERE id = ?");\n$stmt->execute([1]);`;
                         } else {
-                            code = `<?php\n// PHP PDO SQLite - Custom Query\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->query("${sql}");\n$result = $stmt->fetchAll(PDO::FETCH_ASSOC);\nprint_r($result);`;
+                            code = `${phpTag}\n// PHP PDO SQLite - Custom Query\n$pdo = new PDO('sqlite:' . __DIR__ . '/${dbName}');\n$stmt = $pdo->query("${sql}");\n$result = $stmt->fetchAll(PDO::FETCH_ASSOC);\nprint_r($result);`;
                         }
                     } else if (lang === 'nodejs') {
                         if (op === 'select') {
