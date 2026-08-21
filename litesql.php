@@ -1447,7 +1447,7 @@ class LiteEngine {
         }
     }
 
-    public function executeQuery(string $sql, int $autoLimit = 500): array {
+    public function executeQuery(string $sql, int $autoLimit = 500, bool $dryRun = false): array {
         if (!$this->pdo) return ['error' => 'No database connected'];
         $startTime = microtime(true);
         
@@ -1466,11 +1466,19 @@ class LiteEngine {
 
             $isQuery = preg_match('/^(SELECT|PRAGMA|EXPLAIN)/i', trim($sql)) === 1;
 
+            if ($dryRun && !$this->pdo->inTransaction()) {
+                $this->pdo->beginTransaction();
+            }
+
             if ($isQuery) {
                 $stmt = $this->pdo->query($sql);
                 $rows = $stmt->fetchAll();
                 $elapsed = round((microtime(true) - $startTime) * 1000, 2);
                 $columns = count($rows) > 0 ? array_keys($rows[0]) : [];
+
+                if ($dryRun && $this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
 
                 return [
                     'success' => true,
@@ -1480,25 +1488,35 @@ class LiteEngine {
                     'count' => count($rows),
                     'execution_time_ms' => $elapsed,
                     'auto_limit_applied' => $appliedAutoLimit,
-                    'auto_limit_val' => $autoLimit
+                    'auto_limit_val' => $autoLimit,
+                    'dry_run' => $dryRun
                 ];
             } else {
                 $affected = $this->pdo->exec($sql);
                 $elapsed = round((microtime(true) - $startTime) * 1000, 2);
 
+                if ($dryRun && $this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+
                 return [
                     'success' => true,
                     'type' => 'exec',
                     'affected_rows' => $affected,
-                    'execution_time_ms' => $elapsed
+                    'execution_time_ms' => $elapsed,
+                    'dry_run' => $dryRun
                 ];
             }
         } catch (Exception $e) {
+            if ($dryRun && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             $elapsed = round((microtime(true) - $startTime) * 1000, 2);
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
-                'execution_time_ms' => $elapsed
+                'execution_time_ms' => $elapsed,
+                'dry_run' => $dryRun
             ];
         }
     }
@@ -2176,8 +2194,9 @@ if (isset($_GET['api'])) {
             $input = json_decode(file_get_contents('php://input'), true);
             $sql = $input['sql'] ?? '';
             $autoLimit = isset($input['auto_limit']) ? (int)$input['auto_limit'] : 500;
+            $dryRun = !empty($input['dry_run']);
 
-            echo json_encode($engine->executeQuery($sql, $autoLimit));
+            echo json_encode($engine->executeQuery($sql, $autoLimit, $dryRun));
             break;
 
         case 'export_sql':
@@ -3181,14 +3200,19 @@ if (isset($_GET['api'])) {
                                             </select>
                                         </div>
 
+                                        <label class="flex items-center gap-1.5 text-xs font-semibold cursor-pointer select-none px-2.5 py-1.5 rounded-xl border transition" :class="isDryRun ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/50 shadow-xs' : 'bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800'" title="Sandbox Testing Mode: Runs query inside a transaction and automatically ROLS BACK all changes so database remains 100% untouched!">
+                                            <input type="checkbox" x-model="isDryRun" class="w-3.5 h-3.5 rounded border-amber-500 text-amber-600 focus:ring-amber-500">
+                                            <span>🧪 Dry Run Lock</span>
+                                        </label>
+
                                         <button @click="openSaveQueryModal()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold px-3 py-2 rounded-xl transition flex items-center gap-1.5" title="Save query to Favorites Library">
                                             <i data-lucide="star" class="w-3.5 h-3.5"></i>
                                             <span>Save Favorite</span>
                                         </button>
 
-                                        <button @click="runQuery()" class="bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-semibold px-5 py-2 rounded-xl transition shadow-md shadow-sky-600/20 flex items-center gap-2">
-                                            <i data-lucide="play" class="w-3.5 h-3.5"></i>
-                                            <span>Run Query</span>
+                                        <button @click="runQuery()" :class="isDryRun ? 'from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 shadow-amber-600/30 ring-2 ring-amber-400/50' : 'from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 shadow-sky-600/20'" class="bg-gradient-to-r text-white text-xs font-semibold px-5 py-2 rounded-xl transition shadow-md flex items-center gap-2">
+                                            <i :data-lucide="isDryRun ? 'flask-conical' : 'play'" class="w-3.5 h-3.5"></i>
+                                            <span x-text="isDryRun ? '🧪 Test Dry Run' : 'Run Query'"></span>
                                         </button>
                                     </div>
                                 </div>
@@ -3394,12 +3418,26 @@ if (isset($_GET['api'])) {
                                 </div>
 
                                 <div class="overflow-x-auto p-4 space-y-4">
+                                    <!-- DRY RUN SANDBOX MODE BANNER -->
+                                    <template x-if="queryResult.dry_run">
+                                        <div class="bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 p-3.5 rounded-2xl text-xs font-mono flex items-center justify-between shadow-xs">
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-xl">🧪</span>
+                                                <div>
+                                                    <div class="font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">DRY RUN LOCK ACTIVE (AUTOMATICALLY ROLLED BACK)</div>
+                                                    <p class="text-[11px] opacity-90 font-sans mt-0.5">Query executed inside sandbox transaction and was 100% rolled back. 0 changes written to database disk!</p>
+                                                </div>
+                                            </div>
+                                            <span class="text-[10px] font-bold bg-amber-500 text-slate-950 px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 shadow-xs">Sandbox Test Mode</span>
+                                        </div>
+                                    </template>
+
                                     <template x-if="queryResult.error">
                                         <div class="text-xs text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl font-mono" x-text="queryResult.error"></div>
                                     </template>
 
                                     <template x-if="queryResult.type === 'exec'">
-                                        <div class="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl font-mono" x-text="'Query OK! Affected Rows: ' + queryResult.affected_rows"></div>
+                                        <div class="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl font-mono" x-text="(queryResult.dry_run ? '[DRY RUN] ' : '') + 'Query OK! Affected Rows: ' + queryResult.affected_rows"></div>
                                     </template>
 
                                     <!-- GRID DATA VIEW -->
@@ -5218,6 +5256,7 @@ if (isset($_GET['api'])) {
                 chartLabelCol: '',
                 chartValCol: '',
                 autoSafetyLimitVal: '500',
+                isDryRun: false,
 
                 queryPage: 1,
                 queryPageLimit: '50',
@@ -5982,7 +6021,7 @@ if (isset($_GET['api'])) {
                     const res = await fetch(`?api=query&db_path=${encodeURIComponent(this.activeDb)}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ sql: this.sqlQuery, auto_limit: parseInt(this.autoSafetyLimitVal || '0') })
+                        body: JSON.stringify({ sql: this.sqlQuery, auto_limit: parseInt(this.autoSafetyLimitVal || '0'), dry_run: this.isDryRun })
                     });
                     this.queryResult = await res.json();
                     
