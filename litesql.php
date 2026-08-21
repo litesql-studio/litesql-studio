@@ -3171,10 +3171,16 @@ if (isset($_GET['api'])) {
                                     <div class="text-[11px] text-slate-400 font-mono">Press Run Query or Ctrl+Enter</div>
 
                                     <div class="flex items-center gap-3">
-                                        <label class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 font-medium cursor-pointer select-none" title="Automatically append 'LIMIT 500' to queries missing a LIMIT clause to prevent browser freeze">
-                                            <input type="checkbox" x-model="autoSafetyLimit" class="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sky-600 focus:ring-sky-500">
-                                            <span>Auto Safety LIMIT (500)</span>
-                                        </label>
+                                        <div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 font-medium">
+                                            <i data-lucide="shield" class="w-3.5 h-3.5 text-amber-500 hidden sm:inline"></i>
+                                            <select x-model="autoSafetyLimitVal" class="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-sky-500 font-medium">
+                                                <option value="500">🛡️ Auto LIMIT (500)</option>
+                                                <option value="1000">LIMIT 1,000</option>
+                                                <option value="5000">LIMIT 5,000</option>
+                                                <option value="10000">LIMIT 10,000</option>
+                                                <option value="0">🚀 No Limit (Fetch All)</option>
+                                            </select>
+                                        </div>
 
                                         <button @click="openSaveQueryModal()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold px-3 py-2 rounded-xl transition flex items-center gap-1.5" title="Save query to Favorites Library">
                                             <i data-lucide="star" class="w-3.5 h-3.5"></i>
@@ -3379,9 +3385,10 @@ if (isset($_GET['api'])) {
                                         </template>
 
                                         <template x-if="queryResult.auto_limit_applied">
-                                            <span class="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1" title="Query automatically capped at 500 rows to prevent browser freeze">
-                                                <span>🛡️ Auto LIMIT (500)</span>
-                                            </span>
+                                            <button @click="autoSafetyLimitVal = '0'; runQuery()" class="text-[10px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 transition active:scale-95 cursor-pointer" title="Click to remove limit and fetch ALL records from database">
+                                                <span>🛡️ Capped at 500 rows. Click to Fetch All</span>
+                                                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                                            </button>
                                         </template>
 
                                         <template x-if="queryResult.execution_time_ms !== undefined">
@@ -5202,7 +5209,7 @@ if (isset($_GET['api'])) {
                 chartType: 'bar',
                 chartLabelCol: '',
                 chartValCol: '',
-                autoSafetyLimit: true,
+                autoSafetyLimitVal: '500',
 
                 queryPage: 1,
                 queryPageLimit: '50',
@@ -5926,7 +5933,7 @@ if (isset($_GET['api'])) {
                     const res = await fetch(`?api=query&db_path=${encodeURIComponent(this.activeDb)}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ sql: this.sqlQuery, auto_limit: this.autoSafetyLimit ? 500 : 0 })
+                        body: JSON.stringify({ sql: this.sqlQuery, auto_limit: parseInt(this.autoSafetyLimitVal || '0') })
                     });
                     this.queryResult = await res.json();
                     
