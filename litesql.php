@@ -2522,10 +2522,10 @@ if (isset($_GET['api'])) {
                     <span class="text-[10px] font-mono font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 px-1.5 py-0.5 rounded border border-sky-500/20 ml-1 hidden sm:inline" x-text="'v' + version"></span>
                 </div>
 
-                <!-- Spotlight Command Palette Trigger -->
-                <button @click="showCmdPalette = true; cmdSearch = ''; setTimeout(() => $refs.cmdSearchInput && $refs.cmdSearchInput.focus(), 50)" class="bg-slate-100 dark:bg-slate-950/80 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-800 transition flex items-center gap-2 shadow-inner font-medium ml-1" title="Open Command Palette (Ctrl+K)">
+                <!-- UNIFIED SPOTLIGHT & GLOBAL DATABASE SEARCH TRIGGER -->
+                <button @click="openGlobalSearchModal()" class="bg-slate-100 dark:bg-slate-950/80 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-800 transition flex items-center gap-2 shadow-inner font-medium ml-1 active:scale-95" title="Search keyword across ALL database tables (Ctrl+K)">
                     <i data-lucide="search" class="w-3.5 h-3.5 text-sky-500"></i>
-                    <span class="hidden md:inline">Search studio...</span>
+                    <span class="hidden md:inline text-slate-700 dark:text-slate-200 font-semibold">Search Database...</span>
                     <kbd class="text-[10px] font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 px-1.5 py-0.5 rounded text-slate-400">Ctrl+K</kbd>
                 </button>
 
@@ -2536,14 +2536,6 @@ if (isset($_GET['api'])) {
                         <span class="font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[140px]" x-text="activeDbName"></span>
                         <button @click.stop="vacuumDb()" title="Vacuum Database" class="hover:text-amber-500 text-slate-400 ml-0.5 transition active:scale-95"><i data-lucide="sparkles" class="w-3 h-3"></i></button>
                     </div>
-                </template>
-
-                <!-- GLOBAL DATABASE SEARCH INPUT TRIGGER -->
-                <template x-if="activeDb">
-                    <button type="button" @click="openGlobalSearchModal()" class="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer flex items-center gap-2 transition shadow-inner active:scale-95" title="Search keyword across ALL tables in database">
-                        <i data-lucide="search" class="w-3.5 h-3.5 text-sky-500 shrink-0"></i>
-                        <span class="hidden md:inline text-slate-500 dark:text-slate-400 font-medium">Search DB...</span>
-                    </button>
                 </template>
             </div>
 
@@ -5751,12 +5743,9 @@ if (isset($_GET['api'])) {
                     window.addEventListener('keydown', (e) => {
                         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                             e.preventDefault();
-                            this.showCmdPalette = !this.showCmdPalette;
-                            if (this.showCmdPalette) {
-                                this.cmdSearch = '';
-                                setTimeout(() => this.$refs.cmdSearchInput && this.$refs.cmdSearchInput.focus(), 50);
-                            }
-                        } else if (e.key === 'Escape' && this.showCmdPalette) {
+                            this.openGlobalSearchModal();
+                        } else if (e.key === 'Escape') {
+                            this.showGlobalSearchModal = false;
                             this.showCmdPalette = false;
                         }
                     });
