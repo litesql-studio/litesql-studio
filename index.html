@@ -189,6 +189,14 @@
                         <code>URL: http://localhost:8000/litesql.php  |  Default Password: admin</code>
                     </div>
                 </div>
+
+                <div class="space-y-2 border-t border-slate-800/80 pt-4">
+                    <span class="text-sky-400 font-bold"># 4. Framework Integration (Laravel / Symfony / WordPress)</span>
+                    <p class="text-slate-400 text-xs font-sans leading-relaxed">If your database file is outside the public folder (e.g. Laravel's <code class="text-white bg-slate-800 px-1 rounded font-mono">database/database.sqlite</code>), keep it 100% safe from browser downloads by placing <code class="text-white bg-slate-800 px-1 rounded font-mono">litesql.php</code> in <code class="text-white bg-slate-800 px-1 rounded font-mono">public/</code> and updating <strong>Line 19</strong>:</p>
+                    <div class="bg-slate-950 border border-slate-800/80 p-4 rounded-2xl text-purple-400 flex items-center justify-between font-mono">
+                        <code>$scanDirectory = dirname(__DIR__); // Scans parent directory & database/ folder</code>
+                    </div>
+                </div>
             </div>
         </div>
     </section>

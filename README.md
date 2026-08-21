@@ -105,6 +105,14 @@ http://localhost:8000/litesql.php
 ### 3. Default Login Password
 - **Default Password**: `admin`
 
+### 💡 Framework Integration Guide (Laravel, Symfony, WordPress)
+If your SQLite database file is located outside the web server's public root folder (e.g. Laravel's `database/database.sqlite`), keep your database 100% safe from direct browser downloads by dropping `litesql.php` into your `public/` directory and updating **Line 19** of `litesql.php`:
+
+```php
+// Line 19 in litesql.php - Safely scan parent directory outside public/
+$scanDirectory = dirname(__DIR__); // Scans parent directory & database/ folder
+```
+
 ---
 
 ## 🔒 Production Security & Hardening Guide
