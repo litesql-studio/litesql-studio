@@ -3176,9 +3176,8 @@ if (isset($_GET['api'])) {
                                             <select x-model="autoSafetyLimitVal" class="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-sky-500 font-medium">
                                                 <option value="500">🛡️ Auto LIMIT (500)</option>
                                                 <option value="1000">LIMIT 1,000</option>
+                                                <option value="2500">LIMIT 2,500</option>
                                                 <option value="5000">LIMIT 5,000</option>
-                                                <option value="10000">LIMIT 10,000</option>
-                                                <option value="0">🚀 No Limit (Fetch All)</option>
                                             </select>
                                         </div>
 
@@ -3330,11 +3329,9 @@ if (isset($_GET['api'])) {
                                                     <option value="50">50 / page</option>
                                                     <option value="100">100 / page</option>
                                                     <option value="250">250 / page</option>
-                                                    <option value="500">500 / page</option>
-                                                    <option value="all">All Rows</option>
                                                 </select>
 
-                                                <div x-show="queryPageLimit !== 'all' && totalQueryPages > 1" class="flex items-center gap-1 text-[11px]">
+                                                <div x-show="totalQueryPages > 1" class="flex items-center gap-1 text-[11px]">
                                                     <button @click="queryPage > 1 && queryPage--" :disabled="queryPage <= 1" class="p-1 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-30"><i data-lucide="chevron-left" class="w-3 h-3"></i></button>
                                                     <span class="px-1 font-mono text-slate-700 dark:text-slate-300" x-text="queryPage + ' / ' + totalQueryPages"></span>
                                                     <button @click="queryPage < totalQueryPages && queryPage++" :disabled="queryPage >= totalQueryPages" class="p-1 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-30"><i data-lucide="chevron-right" class="w-3 h-3"></i></button>
@@ -3385,10 +3382,9 @@ if (isset($_GET['api'])) {
                                         </template>
 
                                         <template x-if="queryResult.auto_limit_applied">
-                                            <button @click="autoSafetyLimitVal = '0'; runQuery()" class="text-[10px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 transition active:scale-95 cursor-pointer" title="Click to remove limit and fetch ALL records from database">
-                                                <span>🛡️ Capped at 500 rows. Click to Fetch All</span>
-                                                <i data-lucide="arrow-right" class="w-3 h-3"></i>
-                                            </button>
+                                            <span class="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1" title="Query automatically capped to prevent browser freeze">
+                                                <span>🛡️ Safety LIMIT Active</span>
+                                            </span>
                                         </template>
 
                                         <template x-if="queryResult.execution_time_ms !== undefined">
@@ -3421,7 +3417,7 @@ if (isset($_GET['api'])) {
                                             <tbody class="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono text-slate-800 dark:text-slate-300">
                                                 <template x-for="(r, idx) in pagedQueryRows" :key="idx">
                                                     <tr class="hover:bg-slate-100 dark:hover:bg-slate-800/40">
-                                                        <td class="p-2.5 text-center text-slate-400 border-r border-slate-200 dark:border-slate-800/60" x-text="(queryPageLimit === 'all' ? 0 : (queryPage - 1) * parseInt(queryPageLimit || 50)) + idx + 1"></td>
+                                                        <td class="p-2.5 text-center text-slate-400 border-r border-slate-200 dark:border-slate-800/60" x-text="(queryPage - 1) * Math.min(250, parseInt(queryPageLimit || 50)) + idx + 1"></td>
                                                         <template x-for="col in queryResult.columns" :key="col">
                                                             <td class="p-2.5 border-r border-slate-200 dark:border-slate-800/60" x-text="r[col]"></td>
                                                         </template>
@@ -3442,7 +3438,7 @@ if (isset($_GET['api'])) {
                                         <div class="p-3 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium gap-3 rounded-b-2xl">
                                             <div class="flex items-center gap-2">
                                                 <i data-lucide="layers" class="w-3.5 h-3.5 text-sky-500"></i>
-                                                <span x-text="'Showing ' + (queryPageLimit === 'all' ? 1 : ((queryPage - 1) * parseInt(queryPageLimit || 50) + 1)) + ' to ' + (queryPageLimit === 'all' ? queryResult.rows.length : Math.min(queryPage * parseInt(queryPageLimit || 50), queryResult.rows.length)) + ' of ' + queryResult.rows.length + ' fetched rows'"></span>
+                                                <span x-text="'Showing ' + ((queryPage - 1) * Math.min(250, parseInt(queryPageLimit || 50)) + 1) + ' to ' + Math.min(queryPage * Math.min(250, parseInt(queryPageLimit || 50)), queryResult.rows.length) + ' of ' + queryResult.rows.length + ' fetched rows'"></span>
                                             </div>
 
                                             <div class="flex items-center gap-2">
@@ -5216,15 +5212,14 @@ if (isset($_GET['api'])) {
 
                 get pagedQueryRows() {
                     if (!this.queryResult || !this.queryResult.rows) return [];
-                    if (this.queryPageLimit === 'all') return this.queryResult.rows;
-                    const limit = parseInt(this.queryPageLimit) || 50;
+                    const limit = Math.min(250, parseInt(this.queryPageLimit) || 50);
                     const start = (this.queryPage - 1) * limit;
                     return this.queryResult.rows.slice(start, start + limit);
                 },
 
                 get totalQueryPages() {
-                    if (!this.queryResult || !this.queryResult.rows || this.queryPageLimit === 'all') return 1;
-                    const limit = parseInt(this.queryPageLimit) || 50;
+                    if (!this.queryResult || !this.queryResult.rows) return 1;
+                    const limit = Math.min(250, parseInt(this.queryPageLimit) || 50);
                     return Math.max(1, Math.ceil(this.queryResult.rows.length / limit));
                 },
 
