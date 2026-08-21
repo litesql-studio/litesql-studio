@@ -2593,6 +2593,7 @@ self.addEventListener('fetch', (e) => {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
@@ -5968,38 +5969,70 @@ self.addEventListener('fetch', (e) => {
                 },
 
                 exportChartPng() {
-                    const svgEl = document.getElementById('litesql-chart-svg');
-                    if (!svgEl) {
-                        this.showToast('Chart SVG element not found', 'error');
+                    const chartNode = document.getElementById('litesql-chart-svg');
+                    if (!chartNode) {
+                        this.showToast('Chart container element not found', 'error');
                         return;
                     }
 
-                    const serializer = new XMLSerializer();
-                    const svgString = serializer.serializeToString(svgEl);
-                    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-                    const URL = window.URL || window.webkitURL || window;
-                    const blobURL = URL.createObjectURL(svgBlob);
+                    this.showToast('Generating high-res Chart PNG...', 'success');
 
-                    const image = new Image();
-                    image.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = (svgEl.clientWidth || 800) * 2;
-                        canvas.height = (svgEl.clientHeight || 400) * 2;
-                        const context = canvas.getContext('2d');
-                        context.fillStyle = '#0f172a';
-                        context.fillRect(0, 0, canvas.width, canvas.height);
-                        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                    if (typeof html2canvas === 'function') {
+                        html2canvas(chartNode, {
+                            backgroundColor: '#0f172a',
+                            scale: 2,
+                            useCORS: true,
+                            logging: false
+                        }).then(canvas => {
+                            const png = canvas.toDataURL('image/png');
+                            const downloadLink = document.createElement('a');
+                            downloadLink.href = png;
+                            downloadLink.download = `litesql_chart_${this.chartType}_${Date.now()}.png`;
+                            document.body.appendChild(downloadLink);
+                            downloadLink.click();
+                            document.body.removeChild(downloadLink);
+                            this.showToast('Chart PNG exported successfully!', 'success');
+                        }).catch(err => {
+                            this.showToast('Failed to export chart PNG: ' + err.message, 'error');
+                        });
+                    } else {
+                        const width = chartNode.offsetWidth || 800;
+                        const height = chartNode.offsetHeight || 400;
+                        const htmlString = new XMLSerializer().serializeToString(chartNode);
+                        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+                            <foreignObject width="100%" height="100%">
+                                <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;background:#0f172a;color:#fff;font-family:sans-serif;">
+                                    ${htmlString}
+                                </div>
+                            </foreignObject>
+                        </svg>`;
 
-                        const png = canvas.toDataURL('image/png');
-                        const downloadLink = document.createElement('a');
-                        downloadLink.href = png;
-                        downloadLink.download = `litesql_chart_${this.chartType}_${Date.now()}.png`;
-                        document.body.appendChild(downloadLink);
-                        downloadLink.click();
-                        document.body.removeChild(downloadLink);
-                        this.showToast('Chart PNG image exported successfully!', 'success');
-                    };
-                    image.src = blobURL;
+                        const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                        const URL = window.URL || window.webkitURL || window;
+                        const blobURL = URL.createObjectURL(blob);
+
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width * 2;
+                            canvas.height = height * 2;
+                            const ctx = canvas.getContext('2d');
+                            ctx.scale(2, 2);
+                            ctx.fillStyle = '#0f172a';
+                            ctx.fillRect(0, 0, width, height);
+                            ctx.drawImage(img, 0, 0);
+
+                            const png = canvas.toDataURL('image/png');
+                            const a = document.createElement('a');
+                            a.href = png;
+                            a.download = `litesql_chart_${this.chartType}_${Date.now()}.png`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            this.showToast('Chart PNG exported successfully!', 'success');
+                        };
+                        img.src = blobURL;
+                    }
                 },
 
                 showGlobalSearchModal: false,
