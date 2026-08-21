@@ -3510,6 +3510,37 @@ if (isset($_GET['api'])) {
                                         </div>
                                     </template>
 
+                                    <!-- NUMERIC COLUMN AGGREGATION SUMMARY FOOTER PANEL -->
+                                    <template x-if="queryResult.type === 'select' && queryColumnStats.length > 0">
+                                        <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 space-y-3 text-xs shadow-xs">
+                                            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2">
+                                                <div class="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
+                                                    <i data-lucide="calculator" class="w-4 h-4 text-emerald-500"></i>
+                                                    <span>Column Aggregation Statistics Summary</span>
+                                                    <span class="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono px-2 py-0.5 rounded-full border border-emerald-500/20" x-text="queryColumnStats.length + ' numeric columns'"></span>
+                                                </div>
+                                                <span class="text-[10px] text-slate-400 font-mono">Auto-calculated across all <span class="font-bold text-slate-700 dark:text-slate-300" x-text="queryResult.rows.length"></span> rows</span>
+                                            </div>
+
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 font-mono">
+                                                <template x-for="(stat, idx) in queryColumnStats" :key="idx">
+                                                    <div class="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl space-y-1.5 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition">
+                                                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-1">
+                                                            <span class="font-bold text-sky-600 dark:text-sky-400 truncate text-xs" x-text="stat.column"></span>
+                                                            <span class="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-bold" x-text="'n=' + stat.count"></span>
+                                                        </div>
+                                                        <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-slate-600 dark:text-slate-400">
+                                                            <div><span class="text-slate-400">SUM:</span> <strong class="text-emerald-600 dark:text-emerald-400" x-text="stat.sum.toLocaleString()"></strong></div>
+                                                            <div><span class="text-slate-400">AVG:</span> <strong class="text-purple-600 dark:text-purple-400" x-text="stat.avg.toLocaleString()"></strong></div>
+                                                            <div><span class="text-slate-400">MIN:</span> <strong class="text-amber-600 dark:text-amber-400" x-text="stat.min.toLocaleString()"></strong></div>
+                                                            <div><span class="text-slate-400">MAX:</span> <strong class="text-rose-600 dark:text-rose-400" x-text="stat.max.toLocaleString()"></strong></div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+
                                     <!-- CHART VISUALIZER VIEW -->
                                     <template x-if="queryResult.type === 'select' && queryViewMode === 'chart'">
                                         <div class="space-y-4">
