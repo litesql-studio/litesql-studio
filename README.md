@@ -67,6 +67,7 @@ Outdated tools like **phpLiteAdmin** and **Adminer** were built over a decade ag
 ### ⚡ 3. SQL Console & Performance Profiler
 - **Live SQL Autocomplete & IntelliSense**: Context-aware dropdown autocomplete for SQL keywords, table names, and column identifiers.
 - **📊 Real-Time Column Summary Aggregations**: Auto-calculate `SUM`, `AVG`, `MIN`, `MAX`, and sample `COUNT` metrics for numeric columns in SQL query result sets.
+- **📄 PDF Report Exporter**: 1-click export of filtered Data Grid records or SQL console results into clean, beautifully formatted printable PDF reports with database metadata, SQL statements, and timestamps.
 - **📊 Interactive SQL Chart & Graph Visualizer**: Render dynamic Bar, Line, Pie, and Donut charts directly from SQL query results with custom X/Y column mappings and 1-click `📷 Export PNG` image download.
 - **✨ 1-Click SQL Formatter & Beautifier**: Instantly clean, indent, and format messy single-line SQL queries into clean multi-line structured code.
 - **🧪 SQL Dry Run Lock (Transaction Sandbox Mode)**: Test dangerous `UPDATE`, `DELETE`, `DROP`, or `INSERT` queries inside an isolated transaction that automatically `ROLLBACK`s — inspecting affected rows with 0% write effect on database disk.

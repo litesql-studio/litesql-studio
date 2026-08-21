@@ -2960,7 +2960,7 @@ self.addEventListener('fetch', (e) => {
                                             <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400 transition" :class="open ? 'rotate-180' : ''"></i>
                                         </button>
 
-                                        <div x-show="open" x-cloak class="absolute right-0 mt-2 w-40 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 z-50 text-xs space-y-1">
+                                        <div x-show="open" x-cloak class="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 z-50 text-xs space-y-1">
                                             <a :href="'?api=export_csv&table=' + activeTable" target="_blank" @click="open = false" class="flex items-center gap-2 p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 transition font-medium">
                                                 <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-500"></i>
                                                 <span>Export CSV</span>
@@ -2973,6 +2973,10 @@ self.addEventListener('fetch', (e) => {
                                                 <i data-lucide="database" class="w-3.5 h-3.5 text-sky-500"></i>
                                                 <span>Export SQL Dump</span>
                                             </a>
+                                            <button @click="exportGridDataPdf(); open = false" class="w-full text-left flex items-center gap-2 p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 transition font-medium border-t border-slate-100 dark:border-slate-800">
+                                                <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-500"></i>
+                                                <span>Export PDF Report</span>
+                                            </button>
                                             <button @click="showEncryptedExportModal = true; open = false" class="w-full text-left flex items-center gap-2 p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400 transition font-medium border-t border-slate-100 dark:border-slate-800">
                                                 <i data-lucide="lock" class="w-3.5 h-3.5 text-amber-500"></i>
                                                 <span>Export Encrypted DB (.zip)</span>
@@ -2982,6 +2986,123 @@ self.addEventListener('fetch', (e) => {
                                 </div>
                             </template>
                         </div>
+        <div class="space-y-2">
+            <template x-for="(rule, rIdx) in dataFilters" :key="rIdx">
+                <div class="flex flex-wrap items-center gap-2 bg-white dark:bg-slate-950 p-2 rounded-2xl border border-slate-200 dark:border-slate-800/80 shadow-xs">
+                    <!-- 1. Column Selector -->
+                    <select x-model="rule.column" @change="applyFilters()" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-mono focus:outline-none focus:border-sky-500">
+                        <template x-for="col in tableColumns" :key="col.name">
+                            <option :value="col.name" x-text="col.name + ' (' + (col.type || 'TEXT') + ')'"></option>
+                        </template>
+                    </select>
+
+                    <!-- 2. Operator Selector -->
+                    <select x-model="rule.op" @change="applyFilters()" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:border-sky-500">
+                        <option value="LIKE">contains (LIKE)</option>
+                        <option value="=">equals (=)</option>
+                        <option value="!=">not equals (!=)</option>
+                        <option value="NOT LIKE">does not contain</option>
+                        <option value=">">greater than (&gt;)</option>
+                        <option value="<">less than (&lt;)</option>
+                        <option value=">=">greater or equal (&gt;=)</option>
+                        <option value="<=">less or equal (&lt;=)</option>
+                        <option value="IS NULL">is NULL</option>
+                        <option value="IS NOT NULL">is NOT NULL</option>
+                    </select>
+
+                    <!-- 3. Value Input -->
+                    <template x-if="rule.op !== 'IS NULL' && rule.op !== 'IS NOT NULL'">
+                        <input type="text" x-model="rule.value" @keyup.enter="applyFilters()" @change="applyFilters()" placeholder="Enter filter value..." class="flex-1 min-w-[160px] bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-sky-500 font-mono">
+                    </template>
+
+                    <!-- 4. Remove Rule Button -->
+                    <button type="button" @click="removeFilterRule(rIdx)" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-xl transition" title="Remove Rule"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                </div>
+            </template>
+
+            <template x-if="dataFilters.length === 0">
+                <div class="text-xs text-slate-400 dark:text-slate-500 italic py-2 text-center bg-white/50 dark:bg-slate-950/50 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
+                    No active filter conditions. Click "+ Add Rule" above to filter by specific columns.
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- DATA TABLE GRID -->
+    <div class="flex-1 overflow-auto">
+        <template x-if="loading">
+            <div class="p-12 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-sky-500"></i>
+                <span>Loading record set...</span>
+            </div>
+        </template>
+
+        <template x-if="!loading && tableColumns.length === 0">
+            <div class="p-12 text-center text-xs text-slate-500">Select a table from the sidebar to view data grid.</div>
+        </template>
+
+        <template x-if="!loading && tableColumns.length > 0">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead class="sticky top-0 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800/80 text-slate-700 dark:text-slate-300 font-semibold shadow-sm z-10">
+                    <tr>
+                        <!-- Bulk Select Checkbox Header -->
+                        <th class="p-2.5 w-10 text-center border-r border-slate-200 dark:border-slate-800/60 bg-slate-100 dark:bg-slate-900">
+                            <input type="checkbox" @change="toggleSelectAll($event.target.checked)" :checked="isAllSelected" class="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sky-600 focus:ring-sky-500 cursor-pointer">
+                        </th>
+                        <th class="p-2.5 w-10 text-center border-r border-slate-200 dark:border-slate-800/60 bg-slate-100 dark:bg-slate-900">#</th>
+                        <template x-for="col in tableColumns" :key="col.name">
+                            <th @click="sortData(col.name)" class="p-2.5 border-r border-slate-200 dark:border-slate-800/60 hover:bg-slate-200/60 dark:hover:bg-slate-800/80 cursor-pointer select-none transition" :class="sortColumn === col.name ? 'bg-sky-500/10 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold' : ''" title="Click to sort by this column">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="flex items-center gap-1.5 truncate">
+                                        <span x-text="col.name" class="font-semibold"></span>
+                                        <template x-if="col.pk > 0">
+                                            <span class="text-[9px] bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-1 rounded font-bold">PK</span>
+                                        </template>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <template x-if="sortColumn === col.name">
+                                            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-600 text-white shadow-xs" x-text="sortDir === 'ASC' ? '▲ ASC' : '▼ DESC'"></span>
+                                        </template>
+                                        <template x-if="sortColumn !== col.name">
+                                            <span class="text-slate-400 dark:text-slate-600 text-[10px]">↕</span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </th>
+                        </template>
+                        <th class="p-2.5 w-28 text-center whitespace-nowrap">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-800/60">
+                    <template x-for="(row, rIdx) in tableRows" :key="rIdx">
+                        <tr :class="row._selected ? 'bg-sky-50 dark:bg-sky-950/40' : 'hover:bg-slate-50 dark:hover:bg-slate-900/60'" class="transition group">
+                            <!-- Bulk Select Checkbox Cell -->
+                            <td class="p-2 text-center border-r border-slate-200 dark:border-slate-800/60">
+                                <input type="checkbox" x-model="row._selected" class="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sky-600 focus:ring-sky-500 cursor-pointer">
+                            </td>
+                            <td class="p-2 text-center text-slate-400 dark:text-slate-500 font-mono text-[10px] border-r border-slate-200 dark:border-slate-800/60" x-text="(currentPage - 1) * pageLimit + rIdx + 1"></td>
+                            <template x-for="col in tableColumns" :key="col.name">
+                                <td @dblclick="startCellEdit(rIdx, col.name, row[col.name])" 
+                                    :class="editingCell.row === rIdx && editingCell.col === col.name ? 'p-0 ring-2 ring-sky-500 bg-sky-50 dark:bg-sky-950 z-20' : 'p-2.5 border-r border-slate-200 dark:border-slate-800/60 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/40'"
+                                    class="relative text-slate-800 dark:text-slate-300 font-mono max-w-xs truncate">
+                                    
+                                    <template x-if="!(editingCell.row === rIdx && editingCell.col === col.name)">
+                                        <span :class="row[col.name] === null ? 'text-slate-400 dark:text-slate-600 italic text-[11px]' : ''" 
+                                              x-text="row[col.name] === null ? 'NULL' : row[col.name]"></span>
+                                    </template>
+
+                                    <template x-if="editingCell.row === rIdx && editingCell.col === col.name">
+                                        <input type="text" 
+                                               x-model="editingCell.value" 
+                                               @keyup.enter="saveCellEdit(row)" 
+                                               @keyup.escape="editingCell = {row: null, col: null, value: ''}"
+                                               @blur="saveCellEdit(row)" 
+                                               x-ref="editInput"
+                                               x-init="$nextTick(() => $el.focus())"
+                                               class="w-full h-full bg-white dark:bg-slate-950 text-slate-900 dark:text-white px-2 py-1.5 text-xs border-none focus:outline-none font-mono">
+                                    </template>
+                                </td>
+                            </template>
 
                         <!-- TAB 1: EXCEL-STYLE DATA GRID (Double-Click Inline Editing, Row Action Edit & Bulk Actions) -->
                         <div x-show="activeTab === 'data'" class="flex-1 flex flex-col overflow-hidden relative">
@@ -3717,6 +3838,10 @@ self.addEventListener('fetch', (e) => {
                                                     <button @click="exportQueryResultsHtml(); open = false" class="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-sky-500/10 hover:text-sky-600 dark:hover:text-sky-400 flex items-center gap-2 transition font-medium border-t border-slate-100 dark:border-slate-800">
                                                         <i data-lucide="file-code" class="w-3.5 h-3.5 text-sky-500"></i>
                                                         <span>Export Styled HTML Report</span>
+                                                    </button>
+                                                    <button @click="exportQueryResultsPdf(); open = false" class="w-full text-left p-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 flex items-center gap-2 transition font-medium border-t border-slate-100 dark:border-slate-800">
+                                                        <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-500"></i>
+                                                        <span>Export PDF Printable Report</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -6053,6 +6178,186 @@ self.addEventListener('fetch', (e) => {
                     }
                 },
 
+                escapeHtml(str) {
+                    if (str === null || str === undefined) return '';
+                    return String(str)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#039;');
+                },
+
+                exportQueryResultsPdf() {
+                    if (!this.queryResult || !this.queryResult.rows || this.queryResult.rows.length === 0) {
+                        this.showToast('No query data to export', 'error');
+                        return;
+                    }
+
+                    const rows = this.queryResult.rows;
+                    const cols = this.queryResult.columns || Object.keys(rows[0] || {});
+                    const dateStr = new Date().toLocaleString();
+                    const dbName = this.activeDbName || 'Database';
+
+                    const printWin = window.open('', '_blank');
+                    if (!printWin) {
+                        this.showToast('Pop-up blocked. Please allow pop-ups for PDF export.', 'error');
+                        return;
+                    }
+
+                    let html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>LiteSQL Studio Report - ${this.escapeHtml(dbName)}</title>
+    <style>
+        @page { size: A4 landscape; margin: 12mm; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 11px; color: #1e293b; margin: 0; padding: 20px; background: #fff; }
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 16px; }
+        .title { font-size: 18px; font-weight: 800; color: #0284c7; margin: 0; }
+        .subtitle { font-size: 11px; color: #64748b; margin-top: 4px; font-family: monospace; }
+        .meta { text-align: right; font-size: 10px; color: #64748b; font-family: monospace; }
+        .sql-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-family: monospace; font-size: 10px; color: #334155; margin-bottom: 16px; word-break: break-all; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th { background: #0f172a; color: #ffffff; text-align: left; padding: 7px 10px; font-size: 10px; text-transform: uppercase; font-family: monospace; border: 1px solid #0f172a; }
+        td { border: 1px solid #cbd5e1; padding: 6px 10px; vertical-align: top; word-break: break-word; }
+        tr:nth-child(even) { background-color: #f8fafc; }
+        .footer { margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1 class="title">⚡ LiteSQL Studio — Query Data Report</h1>
+            <div class="subtitle">Database: <strong>${this.escapeHtml(dbName)}</strong> &bull; Total Fetched Rows: <strong>${rows.length}</strong></div>
+        </div>
+        <div class="meta">
+            <div>Generated: ${dateStr}</div>
+            <div>Author: Dhiraj Sharma (litesql-studio)</div>
+        </div>
+    </div>
+
+    <div class="sql-box">
+        <strong>SQL Query:</strong> ${this.escapeHtml(this.sqlQuery || 'N/A')}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                ${cols.map(c => `<th>${this.escapeHtml(c)}</th>`).join('')}
+            </tr>
+        </thead>
+        <tbody>
+            ${rows.map(r => `
+                <tr>
+                    ${cols.map(c => `<td>${this.escapeHtml(r[c] !== null && r[c] !== undefined ? String(r[c]) : 'NULL')}</td>`).join('')}
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <div>LiteSQL Studio v${this.version} &bull; Open Source SQLite Administrator</div>
+        <div>Page 1 of 1</div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 300);
+        };
+    <\/script>
+</body>
+</html>`;
+
+                    printWin.document.write(html);
+                    printWin.document.close();
+                    this.showToast('Printable PDF Report opened!', 'success');
+                },
+
+                exportGridDataPdf() {
+                    if (!this.tableRows || this.tableRows.length === 0) {
+                        this.showToast('No table rows to export', 'error');
+                        return;
+                    }
+
+                    const rows = this.tableRows;
+                    const cols = this.tableColumns.length > 0 ? this.tableColumns.map(c => c.name) : Object.keys(rows[0] || {}).filter(k => k !== '_selected');
+                    const dateStr = new Date().toLocaleString();
+                    const dbName = this.activeDbName || 'Database';
+                    const tableName = this.activeTable || 'Table';
+
+                    const printWin = window.open('', '_blank');
+                    if (!printWin) {
+                        this.showToast('Pop-up blocked. Please allow pop-ups for PDF export.', 'error');
+                        return;
+                    }
+
+                    let html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>LiteSQL Studio Report - ${this.escapeHtml(tableName)}</title>
+    <style>
+        @page { size: A4 landscape; margin: 12mm; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 11px; color: #1e293b; margin: 0; padding: 20px; background: #fff; }
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 16px; }
+        .title { font-size: 18px; font-weight: 800; color: #0284c7; margin: 0; }
+        .subtitle { font-size: 11px; color: #64748b; margin-top: 4px; font-family: monospace; }
+        .meta { text-align: right; font-size: 10px; color: #64748b; font-family: monospace; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th { background: #0f172a; color: #ffffff; text-align: left; padding: 7px 10px; font-size: 10px; text-transform: uppercase; font-family: monospace; border: 1px solid #0f172a; }
+        td { border: 1px solid #cbd5e1; padding: 6px 10px; vertical-align: top; word-break: break-word; }
+        tr:nth-child(even) { background-color: #f8fafc; }
+        .footer { margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1 class="title">⚡ LiteSQL Studio — Table Data Report</h1>
+            <div class="subtitle">Database: <strong>${this.escapeHtml(dbName)}</strong> &bull; Table: <strong>${this.escapeHtml(tableName)}</strong> &bull; Filtered Records: <strong>${this.totalRows}</strong></div>
+        </div>
+        <div class="meta">
+            <div>Generated: ${dateStr}</div>
+            <div>Author: Dhiraj Sharma (litesql-studio)</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                ${cols.map(c => `<th>${this.escapeHtml(c)}</th>`).join('')}
+            </tr>
+        </thead>
+        <tbody>
+            ${rows.map(r => `
+                <tr>
+                    ${cols.map(c => `<td>${this.escapeHtml(r[c] !== null && r[c] !== undefined ? String(r[c]) : 'NULL')}</td>`).join('')}
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <div>LiteSQL Studio v${this.version} &bull; Open Source SQLite Administrator</div>
+        <div>Page 1 of 1</div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 300);
+        };
+    <\/script>
+</body>
+</html>`;
+
+                    printWin.document.write(html);
+                    printWin.document.close();
+                    this.showToast('Printable PDF Report opened!', 'success');
+                },
+
                 showGlobalSearchModal: false,
                 globalSearchQuery: '',
                 globalSearchLoading: false,
@@ -6195,6 +6500,8 @@ self.addEventListener('fetch', (e) => {
                         { title: 'Import Data (CSV/JSON)', icon: 'file-up', action: () => { this.showImportModal = true; } },
                         { title: 'Backup Database (.sqlite)', icon: 'hard-drive-download', action: () => { window.location.href = '?api=download_db&db_path=' + encodeURIComponent(this.activeDb); } },
                         { title: '🔒 Export Encrypted Database (.zip)', icon: 'lock', action: () => { this.showEncryptedExportModal = true; } },
+                        { title: '📄 Export PDF Report (Data Grid)', icon: 'file-text', action: () => { this.exportGridDataPdf(); } },
+                        { title: '📄 Export PDF Report (SQL Console Results)', icon: 'file-text', action: () => { this.exportQueryResultsPdf(); } },
                         { title: 'Dual Database Diff', icon: 'git-compare', action: () => { this.openDbDiffModal(); } },
                         { title: 'Switch Theme: Day Light', icon: 'sun', action: () => { this.setTheme('light'); } },
                         { title: 'Switch Theme: Dark Night', icon: 'moon', action: () => { this.setTheme('dark'); } },
