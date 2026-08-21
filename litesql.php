@@ -5603,30 +5603,7 @@ self.addEventListener('fetch', (e) => {
 
                 <!-- Modal Body Results Area -->
                 <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                    <!-- SECTION 1: ⚡ QUICK ACTIONS & NAVIGATION -->
-                    <template x-if="cmdPaletteItems.length > 0">
-                        <div class="space-y-2.5">
-                            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1 flex items-center justify-between">
-                                <span>⚡ Quick Actions & Studio Navigation</span>
-                                <span class="text-[10px] text-slate-400 font-mono" x-text="cmdPaletteItems.length + ' options'"></span>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <template x-for="(item, itemIdx) in cmdPaletteItems" :key="itemIdx">
-                                    <button @click="item.action(); showGlobalSearchModal = false" class="text-left p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 hover:border-sky-500/60 hover:bg-sky-500/5 transition flex items-center justify-between group active:scale-95">
-                                        <div class="flex items-center gap-2.5 truncate">
-                                            <div class="w-7 h-7 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-sky-500 shrink-0 group-hover:scale-110 transition">
-                                                <i :data-lucide="item.icon" class="w-3.5 h-3.5"></i>
-                                            </div>
-                                            <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate" x-text="item.title"></span>
-                                        </div>
-                                        <span class="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded-full shrink-0" x-text="item.type"></span>
-                                    </button>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-
-                    <!-- SECTION 2: 📊 DATABASE TABLE RECORD MATCHES -->
+                    <!-- SECTION 1: 📊 DATABASE TABLE RECORD MATCHES (SHOWN AT TOP ON SEARCH) -->
                     <template x-if="globalSearchLoading">
                         <div class="py-12 text-center space-y-3">
                             <i data-lucide="loader-2" class="w-8 h-8 text-sky-500 animate-spin mx-auto"></i>
@@ -5637,8 +5614,8 @@ self.addEventListener('fetch', (e) => {
                     <template x-if="!globalSearchLoading && globalSearchResults.query && globalSearchResults.total_matches === 0">
                         <div class="py-16 text-center space-y-2">
                             <i data-lucide="search-x" class="w-10 h-10 text-slate-400 mx-auto"></i>
-                            <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300">No Matches Found</h4>
-                            <p class="text-xs text-slate-500">No records found matching "<span x-text="globalSearchResults.query"></span>" across any tables.</p>
+                            <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300">No Record Matches Found</h4>
+                            <p class="text-xs text-slate-500">No database records found matching "<span x-text="globalSearchResults.query"></span>" across any tables.</p>
                         </div>
                     </template>
 
@@ -5694,6 +5671,29 @@ self.addEventListener('fetch', (e) => {
                                     </div>
                                 </div>
                             </template>
+                        </div>
+                    </template>
+
+                    <!-- SECTION 2: ⚡ QUICK ACTIONS & NAVIGATION -->
+                    <template x-if="cmdPaletteItems.length > 0">
+                        <div class="space-y-2.5 pt-2">
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1 flex items-center justify-between">
+                                <span>⚡ Quick Actions & Studio Navigation</span>
+                                <span class="text-[10px] text-slate-400 font-mono" x-text="cmdPaletteItems.length + ' options'"></span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <template x-for="(item, itemIdx) in cmdPaletteItems" :key="itemIdx">
+                                    <button @click="item.action(); showGlobalSearchModal = false" class="text-left p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 hover:border-sky-500/60 hover:bg-sky-500/5 transition flex items-center justify-between group active:scale-95">
+                                        <div class="flex items-center gap-2.5 truncate">
+                                            <div class="w-7 h-7 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-sky-500 shrink-0 group-hover:scale-110 transition">
+                                                <i :data-lucide="item.icon" class="w-3.5 h-3.5"></i>
+                                            </div>
+                                            <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate" x-text="item.title"></span>
+                                        </div>
+                                        <span class="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded-full shrink-0" x-text="item.type"></span>
+                                    </button>
+                                </template>
+                            </div>
                         </div>
                     </template>
                 </div>
@@ -6375,7 +6375,7 @@ self.addEventListener('fetch', (e) => {
                 diskCheckTimer: null,
 
                 get cmdPaletteItems() {
-                    const q = this.cmdSearch.toLowerCase().trim();
+                    const q = (this.globalSearchQuery || this.cmdSearch || '').toLowerCase().trim();
                     const items = [];
 
                     const navs = [
